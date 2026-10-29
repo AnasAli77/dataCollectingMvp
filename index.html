@@ -1,0 +1,1786 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="origin">
+    <title>AlexTransit Mapper | داتا مواصلات إسكندرية</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Fonts: Inter & Cairo (for Arabic) -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', 'Cairo', sans-serif;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
+        .font-arabic {
+            font-family: 'Cairo', sans-serif;
+        }
+
+        #mapWrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            min-height: 420px;
+            background-color: #e2e8f0;
+        }
+
+        #map {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            background-color: #e2e8f0;
+        }
+
+        /* Crosshair cursor while drawing (Leaflet sets its own cursors on child panes) */
+        #map.drawing-cursor,
+        #map.drawing-cursor.leaflet-grab,
+        #map.drawing-cursor .leaflet-grab,
+        #map.drawing-cursor .leaflet-interactive {
+            cursor: crosshair !important;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .waypoint-node {
+            transition: transform 0.15s ease;
+        }
+
+        .waypoint-node:hover {
+            transform: scale(1.25);
+        }
+
+        .leaflet-popup-content-wrapper {
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+            font-family: 'Inter', 'Cairo', sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 text-slate-800 h-screen w-screen flex flex-col md:flex-row overflow-hidden select-none">
+
+    <!-- LEFT SIDEBAR: Controls, Route Builder & Saved Explorer -->
+    <aside
+        class="w-full md:w-[420px] lg:w-[450px] h-[52vh] md:h-full bg-white border-r border-slate-200 flex flex-col z-30 shadow-2xl shrink-0 order-2 md:order-1">
+
+        <!-- App Header -->
+        <header
+            class="px-5 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
+            <div class="flex items-center gap-3">
+                <div
+                    class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-blue-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                    <i class="ph-fill ph-map-trifold text-2xl text-white"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="font-bold text-base tracking-tight">AlexTransit MVP</h1>
+                        <span
+                            class="text-[11px] font-arabic bg-slate-800 text-emerald-400 px-2 py-0.5 rounded-full border border-slate-700 font-semibold">إسكندرية</span>
+                    </div>
+                    <p class="text-xs text-slate-400">Crowdsourced Transit Route Collector</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-1.5">
+                <button id="btnMapSettingsModal" onclick="openMapSettingsModal()"
+                    title="Optional Mapbox token (not required)"
+                    class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white transition flex items-center gap-1 text-xs font-medium border border-slate-700">
+                    <i class="ph-bold ph-gear text-base text-blue-400"></i>
+                    <span class="hidden sm:inline">Map Key</span>
+                </button>
+                <button id="btnExportModal" title="Export Dataset (GeoJSON / JSON)"
+                    class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white transition flex items-center gap-1.5 text-xs font-medium border border-slate-700">
+                    <i class="ph ph-download-simple text-base text-emerald-400"></i>
+                    <span>Export</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <div class="grid grid-cols-2 bg-slate-100 p-1.5 border-b border-slate-200 shrink-0">
+            <button id="tabCreateBtn" onclick="switchTab('create')"
+                class="py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all bg-white text-slate-900 shadow-sm">
+                <i class="ph-bold ph-pencil-line text-emerald-600 text-sm"></i>
+                <span>Draw New Route</span>
+                <span class="font-arabic text-[11px] text-slate-500">(إضافة خط)</span>
+            </button>
+            <button id="tabExploreBtn" onclick="switchTab('explore')"
+                class="py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all text-slate-600 hover:text-slate-900">
+                <i class="ph-bold ph-database text-blue-600 text-sm"></i>
+                <span>Saved Routes</span>
+                <span id="savedCountBadge"
+                    class="bg-slate-200 text-slate-700 px-1.5 py-0.2 rounded-full text-[10px]">0</span>
+            </button>
+        </div>
+
+        <!-- TAB 1: DRAW & SAVE NEW ROUTE -->
+        <div id="tabCreateContent" class="flex-1 overflow-y-auto p-4 space-y-5">
+
+            <!-- Step 1: Vehicle Type Selector -->
+            <div>
+                <div class="flex items-center justify-between mb-2">
+                    <label class="text-xs font-bold uppercase tracking-wider text-slate-500">1. Select Vehicle
+                        Type</label>
+                    <span class="text-xs font-arabic text-slate-500 font-semibold">نوع المواصلة</span>
+                </div>
+                <div class="grid grid-cols-3 gap-2.5">
+                    <button type="button" onclick="selectVehicle('مشروع')" id="vBtn-مشروع"
+                        class="vehicle-btn group relative p-3 rounded-xl border-2 border-emerald-500 bg-emerald-50/70 text-left transition-all flex flex-col justify-between">
+                        <div class="flex items-center justify-between w-full mb-1.5">
+                            <span class="w-3 h-3 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20"></span>
+                            <i class="ph-fill ph-van text-xl text-emerald-600"></i>
+                        </div>
+                        <div class="font-arabic font-bold text-base text-slate-900">مشروع</div>
+                        <div class="text-[11px] text-slate-500 font-medium">Microbus (14-seat)</div>
+                    </button>
+
+                    <button type="button" onclick="selectVehicle('تونايه')" id="vBtn-تونايه"
+                        class="vehicle-btn group relative p-3 rounded-xl border-2 border-slate-200 hover:border-amber-300 bg-white text-left transition-all flex flex-col justify-between">
+                        <div class="flex items-center justify-between w-full mb-1.5">
+                            <span class="w-3 h-3 rounded-full bg-amber-500"></span>
+                            <i class="ph-fill ph-car-profile text-xl text-amber-500"></i>
+                        </div>
+                        <div class="font-arabic font-bold text-base text-slate-900">تونايه</div>
+                        <div class="text-[11px] text-slate-500 font-medium">Minivan (7-seat)</div>
+                    </button>
+
+                    <button type="button" onclick="selectVehicle('اتوبيس')" id="vBtn-اتوبيس"
+                        class="vehicle-btn group relative p-3 rounded-xl border-2 border-slate-200 hover:border-blue-300 bg-white text-left transition-all flex flex-col justify-between">
+                        <div class="flex items-center justify-between w-full mb-1.5">
+                            <span class="w-3 h-3 rounded-full bg-blue-500"></span>
+                            <i class="ph-fill ph-bus text-xl text-blue-600"></i>
+                        </div>
+                        <div class="font-arabic font-bold text-base text-slate-900">اتوبيس</div>
+                        <div class="text-[11px] text-slate-500 font-medium">Public Bus</div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 2: Interactive Route Drawing Controls -->
+            <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-3">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-500 block">2. Trace Path on
+                            Map</span>
+                        <span class="text-[11px] text-slate-500">Click along Alexandria streets to add points</span>
+                    </div>
+                    <label
+                        class="flex items-center gap-1.5 cursor-pointer bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-sm"
+                        title="Automatically follow street curves between clicked points">
+                        <input type="checkbox" id="toggleSnapRoads" checked
+                            class="rounded text-emerald-600 focus:ring-0 w-3.5 h-3.5 cursor-pointer">
+                        <span class="text-[11px] font-bold text-slate-700">Snap to Streets</span>
+                        <i class="ph-fill ph-road-horizon text-emerald-600 text-sm"></i>
+                    </label>
+                </div>
+
+                <!-- Live Metrics Box -->
+                <div class="grid grid-cols-2 gap-2 bg-white p-2.5 rounded-lg border border-slate-200/80 shadow-sm">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-700">
+                            <i class="ph-bold ph-git-commit text-lg"></i>
+                        </div>
+                        <div>
+                            <div class="text-[10px] uppercase font-semibold text-slate-400">Waypoints</div>
+                            <div id="metricPoints" class="text-sm font-bold text-slate-800">0 pts</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2.5 border-l border-slate-100 pl-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-700">
+                            <i class="ph-bold ph-ruler text-lg"></i>
+                        </div>
+                        <div>
+                            <div class="text-[10px] uppercase font-semibold text-slate-400">Est. Distance</div>
+                            <div id="metricDistance" class="text-sm font-bold text-slate-800">0.00 km</div>
+                        </div>
+                    </div>
+                </div>
+                <div id="snapStatus" class="text-[11px] text-slate-500 h-4 leading-4"></div>
+
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="undoLastPoint()" id="btnUndo" disabled
+                        class="flex-1 py-2 px-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-semibold text-slate-700 flex items-center justify-center gap-1.5 shadow-sm transition">
+                        <i class="ph-bold ph-arrow-u-up-left"></i>
+                        <span>Undo Point</span>
+                    </button>
+                    <button type="button" onclick="reverseCurrentRoute()" id="btnReverse" disabled
+                        title="Swap Start and End points"
+                        class="py-2 px-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-semibold text-slate-700 flex items-center justify-center gap-1 shadow-sm transition">
+                        <i class="ph-bold ph-arrows-left-right"></i>
+                        <span>Reverse</span>
+                    </button>
+                    <button type="button" onclick="clearCurrentDraft()" id="btnClear" disabled
+                        class="py-2 px-2.5 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 disabled:opacity-40 disabled:pointer-events-none text-xs font-semibold text-rose-600 flex items-center justify-center gap-1 transition">
+                        <i class="ph-bold ph-trash"></i>
+                        <span>Clear</span>
+                    </button>
+                </div>
+
+                <p class="text-[11px] text-slate-500 flex items-center gap-1.5 leading-tight">
+                    <i class="ph-fill ph-info text-blue-500 shrink-0"></i>
+                    <span>Tip: You can <strong>drag</strong> any point to adjust its street position, or
+                        <strong>click</strong> a point to remove it.</span>
+                </p>
+            </div>
+
+            <!-- Step 3: Route Details Form -->
+            <form id="routeForm" onsubmit="handleSaveRoute(event)" class="space-y-3.5">
+                <div class="flex items-center justify-between">
+                    <label class="text-xs font-bold uppercase tracking-wider text-slate-500">3. Route
+                        Information</label>
+                    <span class="text-xs font-arabic text-slate-500 font-semibold">بيانات الخط</span>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">
+                        Route Name / Line <span class="text-rose-500">*</span>
+                        <span class="font-arabic text-slate-400 font-normal float-right">اسم الخط (من - إلى)</span>
+                    </label>
+                    <input type="text" id="inputRouteName" required dir="auto"
+                        placeholder="مثال: سيدي جابر - المنشية (أو المندرة - محطة مصر)"
+                        class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 font-arabic placeholder:text-slate-400 select-text">
+                </div>
+
+                <div class="grid grid-cols-3 gap-2.5">
+                    <div class="col-span-2">
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">
+                            Main Corridor / Via
+                            <span class="font-arabic text-slate-400 font-normal float-right">خط السير</span>
+                        </label>
+                        <input type="text" id="inputVia" dir="auto" placeholder="عبر: البحر / أبوقير / المحمودية"
+                            class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 font-arabic select-text">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">
+                            Fare (EGP)
+                            <span class="font-arabic text-slate-400 font-normal float-right">الأجرة</span>
+                        </label>
+                        <input type="number" step="0.5" min="0" id="inputFare" placeholder="e.g. 5"
+                            class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 select-text">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">
+                        Notes / Peak Hours (Optional)
+                        <span class="font-arabic text-slate-400 font-normal float-right">ملاحظات</span>
+                    </label>
+                    <input type="text" id="inputNotes" dir="auto"
+                        placeholder="مثال: متاح ٢٤ ساعة، يقف عند كوبري ستانلي..."
+                        class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 font-arabic select-text">
+                </div>
+
+                <button type="submit" id="btnSaveRoute"
+                    class="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-emerald-600 text-white font-semibold text-sm shadow-lg shadow-slate-900/10 transition-all flex items-center justify-center gap-2">
+                    <i class="ph-bold ph-floppy-disk text-lg"></i>
+                    <span>Save Transit Route</span>
+                    <span class="font-arabic text-xs opacity-90">(حفظ المسار)</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- TAB 2: SAVED ROUTES EXPLORER -->
+        <div id="tabExploreContent" class="hidden flex-1 flex flex-col overflow-hidden">
+            <div class="p-3.5 bg-slate-50 border-b border-slate-200 space-y-2.5 shrink-0">
+                <div class="relative">
+                    <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input type="text" id="searchRoutesInput" oninput="renderRoutesList()" dir="auto"
+                        placeholder="ابحث عن خط أو منطقة (مثال: المنشية، العجمي)..."
+                        class="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 font-arabic select-text">
+                </div>
+                <div class="flex items-center gap-1.5 overflow-x-auto pb-0.5">
+                    <button onclick="setFilterVehicle('ALL')" id="filter-ALL"
+                        class="filter-pill px-3 py-1 rounded-full text-xs font-semibold bg-slate-900 text-white transition shrink-0">
+                        All <span class="font-arabic ml-0.5">(الكل)</span>
+                    </button>
+                    <button onclick="setFilterVehicle('مشروع')" id="filter-مشروع"
+                        class="filter-pill px-3 py-1 rounded-full text-xs font-arabic font-bold bg-white border border-slate-200 text-slate-700 hover:bg-emerald-50 transition flex items-center gap-1.5 shrink-0">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span> مشروع
+                    </button>
+                    <button onclick="setFilterVehicle('تونايه')" id="filter-تونايه"
+                        class="filter-pill px-3 py-1 rounded-full text-xs font-arabic font-bold bg-white border border-slate-200 text-slate-700 hover:bg-amber-50 transition flex items-center gap-1.5 shrink-0">
+                        <span class="w-2 h-2 rounded-full bg-amber-500"></span> تونايه
+                    </button>
+                    <button onclick="setFilterVehicle('اتوبيس')" id="filter-اتوبيس"
+                        class="filter-pill px-3 py-1 rounded-full text-xs font-arabic font-bold bg-white border border-slate-200 text-slate-700 hover:bg-blue-50 transition flex items-center gap-1.5 shrink-0">
+                        <span class="w-2 h-2 rounded-full bg-blue-500"></span> اتوبيس
+                    </button>
+                </div>
+            </div>
+
+            <div id="routesListContainer" class="flex-1 overflow-y-auto p-3 space-y-2.5"></div>
+
+            <div
+                class="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500 shrink-0">
+                <button onclick="loadSampleAlexandriaRoutes()"
+                    class="text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1">
+                    <i class="ph-bold ph-sparkle"></i>
+                    <span>+ Load Sample Alex Routes</span>
+                </button>
+                <span id="dbStatusIndicator" class="flex items-center gap-1.5 text-[11px]">
+                    <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> Connecting...
+                </span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- RIGHT AREA: Interactive Map of Alexandria & Floating HUD -->
+    <main id="mapWrapper" class="flex-1 h-[48vh] md:h-full relative order-1 md:order-2">
+
+        <!-- Top Floating HUD -->
+        <div
+            class="absolute top-3 left-3 right-3 z-20 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+
+            <div
+                class="pointer-events-auto flex items-center bg-white/95 backdrop-blur-md p-1.5 rounded-xl shadow-lg border border-slate-200/80 gap-1.5 max-w-full overflow-x-auto">
+                <div
+                    class="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 rounded-lg text-xs font-semibold text-slate-700 shrink-0">
+                    <i class="ph-fill ph-compass text-blue-600 text-sm"></i>
+                    <span class="hidden sm:inline">Jump to Hub:</span>
+                </div>
+                <select id="hubSelector" onchange="jumpToHub(this.value)"
+                    class="text-xs font-arabic font-bold bg-transparent text-slate-800 pr-2 py-1 focus:outline-none cursor-pointer">
+                    <option value="">اختر منطقة في الإسكندرية...</option>
+                    <option value="31.2001,29.8994,15">محطة الرمل (Raml Station)</option>
+                    <option value="31.1981,29.8942,15">المنشية (El-Mansheya)</option>
+                    <option value="31.1927,29.9061,15">محطة مصر (Misr Station)</option>
+                    <option value="31.2135,29.8852,15">بحري / قلعة قايتباي (Bahary)</option>
+                    <option value="31.2185,29.9422,15">سيدي جابر (Sidi Gaber)</option>
+                    <option value="31.2130,29.9555,15">سموحة (Smouha)</option>
+                    <option value="31.2456,29.9675,15">سان ستيفانو (San Stefano)</option>
+                    <option value="31.2422,29.9922,15">سيدي بشر (Sidi Bishr)</option>
+                    <option value="31.2654,29.9985,15">ميامي (Miami)</option>
+                    <option value="31.2768,30.0131,15">المندرة (El-Mandara)</option>
+                    <option value="31.3210,30.0615,14">أبو قير (Abu Qir)</option>
+                    <option value="31.1905,29.9265,15">محرم بك (Moharam Bek)</option>
+                    <option value="31.1795,29.8768,15">الورديان / القباري (El-Wardian)</option>
+                    <option value="31.1489,29.7825,14">العجمي - البيطاش / الهانوفيل (El-Agamy)</option>
+                    <option value="31.0975,29.7260,14">الكيلو 21 (Kilo 21)</option>
+                </select>
+                <button onclick="resetAlexandriaView()" title="Reset to Full Alexandria View"
+                    class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600 transition shrink-0">
+                    <i class="ph-bold ph-arrows-out text-sm"></i>
+                </button>
+            </div>
+
+            <div class="pointer-events-auto flex flex-wrap items-center gap-2">
+                <!-- Tile style switcher (buttons are generated from TILE_PROVIDERS) -->
+                <div id="tileSwitcher"
+                    class="bg-white/95 backdrop-blur-md p-1 rounded-xl shadow-lg border border-slate-200/80 flex items-center gap-1 text-xs font-semibold">
+                </div>
+
+                <div
+                    class="bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-xl shadow-lg border border-slate-200/80 flex items-center">
+                    <label class="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700">
+                        <input type="checkbox" id="toggleAllRoutesOverlay" checked
+                            onchange="updateBackgroundRoutesLayer()"
+                            class="rounded text-emerald-600 focus:ring-0 w-4 h-4 cursor-pointer">
+                        <span>Show Saved Network</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Floating HUD -->
+        <div
+            class="absolute bottom-5 left-3 right-3 z-20 flex flex-wrap items-end justify-between gap-2 pointer-events-none">
+
+            <div id="modeBanner"
+                class="pointer-events-auto bg-slate-900/95 backdrop-blur-md text-white px-4 py-2.5 rounded-2xl shadow-xl border border-slate-700/80 flex items-center gap-3">
+                <span id="modePulse" class="w-3 h-3 rounded-full bg-emerald-400 animate-ping"></span>
+                <div>
+                    <div id="modeTitle" class="text-xs font-bold tracking-wide uppercase text-emerald-400">Drawing Mode
+                        Active (وضع الرسم)</div>
+                    <div id="modeSubtitle" class="text-[11px] text-slate-300">Click anywhere on Alexandria streets to
+                        place route waypoints</div>
+                </div>
+            </div>
+
+            <div
+                class="pointer-events-auto bg-white/95 backdrop-blur-md px-3.5 py-2 rounded-xl shadow-lg border border-slate-200/80 flex items-center gap-3 text-xs font-arabic font-bold">
+                <div class="flex items-center gap-1.5">
+                    <span class="w-3 h-1.5 rounded-full bg-emerald-500 inline-block"></span>
+                    <span class="text-slate-700">مشروع</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <span class="w-3 h-1.5 rounded-full bg-amber-500 inline-block"></span>
+                    <span class="text-slate-700">تونايه</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <span class="w-3 h-1.5 rounded-full bg-blue-500 inline-block"></span>
+                    <span class="text-slate-700">اتوبيس</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Leaflet Map Canvas -->
+        <div id="map" class="drawing-cursor"></div>
+
+        <div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2 pointer-events-none"></div>
+    </main>
+
+    <!-- EXPORT DATASET MODAL -->
+    <div id="exportModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div
+            class="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
+            <div class="px-5 py-4 bg-slate-900 text-white flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <i class="ph-fill ph-code-block text-emerald-400 text-xl"></i>
+                    <div>
+                        <h3 class="font-bold text-sm">Export Collected Transit Dataset</h3>
+                        <p class="text-[11px] text-slate-400">Ready for routing graphs, PostGIS, or navigation
+                            algorithms</p>
+                    </div>
+                </div>
+                <button onclick="closeExportModal()"
+                    class="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white">
+                    <i class="ph-bold ph-x"></i>
+                </button>
+            </div>
+
+            <div class="p-5 overflow-y-auto space-y-4 flex-1">
+                <div
+                    class="flex flex-wrap items-center justify-between gap-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <div class="text-xs">
+                        <span class="font-bold text-slate-800" id="exportStatsText">0 Routes Ready</span>
+                        <span class="text-slate-500 block">Format includes coordinates `[lng, lat]`, vehicle type, fare,
+                            and distance.</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="switchExportFormat('geojson')" id="fmtBtnGeoJSON"
+                            class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 text-white">GeoJSON</button>
+                        <button onclick="switchExportFormat('raw')" id="fmtBtnRaw"
+                            class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate-300 text-slate-700">Raw
+                            JSON</button>
+                    </div>
+                </div>
+
+                <textarea id="exportTextarea" readonly
+                    class="w-full h-64 p-3 rounded-xl bg-slate-900 text-emerald-400 font-mono text-xs focus:outline-none select-all resize-none"></textarea>
+            </div>
+
+            <div class="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2.5">
+                <button onclick="copyExportToClipboard()"
+                    class="px-4 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                    <i class="ph-bold ph-copy"></i>
+                    <span>Copy to Clipboard</span>
+                </button>
+                <button onclick="downloadExportFile()"
+                    class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold text-white flex items-center gap-1.5 shadow-md">
+                    <i class="ph-bold ph-download-simple"></i>
+                    <span>Download File</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DELETE CONFIRMATION MODAL -->
+    <div id="deleteModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-200 space-y-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                    <i class="ph-fill ph-warning-circle text-2xl"></i>
+                </div>
+                <div>
+                    <h4 class="font-bold text-sm text-slate-900">Delete Transit Route?</h4>
+                    <p id="deleteModalRouteName" class="text-xs text-slate-500 font-arabic mt-0.5"></p>
+                </div>
+            </div>
+            <p class="text-xs text-slate-600">This will permanently remove this route and its waypoints.</p>
+            <div class="flex items-center justify-end gap-2 pt-2">
+                <button onclick="closeDeleteModal()"
+                    class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700">Cancel</button>
+                <button id="confirmDeleteBtn"
+                    class="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-xs font-semibold text-white">Delete
+                    Route</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- OPTIONAL MAPBOX TOKEN MODAL -->
+    <div id="mapSettingsModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden">
+            <div class="px-5 py-4 bg-slate-900 text-white flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <i class="ph-fill ph-map-pin text-blue-400 text-xl"></i>
+                    <div>
+                        <h3 class="font-bold text-sm">Map Tiles & Optional Mapbox Key</h3>
+                        <p class="text-[11px] text-slate-400">No key is needed. Esri tiles are used by default.</p>
+                    </div>
+                </div>
+                <button onclick="closeMapSettingsModal()"
+                    class="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white">
+                    <i class="ph-bold ph-x"></i>
+                </button>
+            </div>
+            <div class="p-5 space-y-4">
+                <div
+                    class="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-start gap-2.5">
+                    <i class="ph-fill ph-check-circle text-emerald-600 text-base shrink-0 mt-0.5"></i>
+                    <div>
+                        <strong>Free maps are active.</strong> Use the switcher at the top-right of the map to choose
+                        Streets, Topo, Satellite + Labels, Dark or OSM. If a style fails to load, the app falls back
+                        automatically.
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Optional Mapbox Access Token (starts with
+                        <code class="bg-slate-100 px-1 rounded">pk.</code>)</label>
+                    <input type="text" id="inputMapboxToken" placeholder="pk.eyJ1Ijoi..."
+                        class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 select-text">
+                    <p class="text-[11px] text-slate-500 mt-1">Leave blank to keep the free tiles. Invalid tokens are
+                        ignored.</p>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                    <button type="button" onclick="resetToFreeTiles()"
+                        class="px-3.5 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700">Use
+                        Free Tiles</button>
+                    <button type="button" onclick="applyCustomMapboxToken()"
+                        class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-xs font-semibold text-white shadow">Apply
+                        Token</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- APPLICATION SCRIPT -->
+    <script type="module">
+        // ==========================================
+        // 1. VEHICLE CONFIGURATION & STYLING
+        // ==========================================
+        const VEHICLE_CONFIG = {
+            'مشروع': {
+                labelAr: 'مشروع',
+                labelEn: 'Microbus',
+                color: '#10b981',
+                badgeBg: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+                icon: 'ph-van'
+            },
+            'تونايه': {
+                labelAr: 'تونايه',
+                labelEn: 'Minivan (Suzuki)',
+                color: '#f59e0b',
+                badgeBg: 'bg-amber-100 text-amber-800 border-amber-300',
+                icon: 'ph-car-profile'
+            },
+            'اتوبيس': {
+                labelAr: 'اتوبيس',
+                labelEn: 'Public Bus',
+                color: '#3b82f6',
+                badgeBg: 'bg-blue-100 text-blue-800 border-blue-300',
+                icon: 'ph-bus'
+            }
+        };
+
+        // ==========================================
+        // 2. APPLICATION STATE
+        // ==========================================
+        const LS_KEY = 'alexTransitRoutes_v1';
+        const DEFAULT_CENTER = [31.2089, 29.9295];
+        const DEFAULT_ZOOM = 13;
+
+        let currentTab = 'create';
+        let selectedVehicle = 'مشروع';
+        let currentWaypoints = [];
+        let currentSnappedPath = [];
+        let savedRoutes = [];
+        let activeFilterVehicle = 'ALL';
+        let highlightedRouteId = null;
+        let currentExportFormat = 'geojson';
+        let pendingDeleteRouteId = null;
+
+        let map;
+        let activeBase = null;
+        let currentTileStyle = 'streets';
+        let customMapboxToken = '';
+        let draftPolyline = null;
+        let draftMarkers = [];
+        let backgroundLayerGroup = null;
+        let highlightLayerGroup = null;
+        let snapSeq = 0;
+        let lastSnapWarnAt = 0;
+
+        // ==========================================
+        // 3. TILE PROVIDERS (all work without an API key)
+        // CARTO Voyager is intentionally NOT used: it now returns an
+        // "API KEY REQUIRED" watermark. OSM blocks tiles in some embedded
+        // previews, so it is optional and has an automatic fallback.
+        // ==========================================
+        const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services';
+        const TILE_PROVIDERS = {
+            streets: {
+                label: 'Streets',
+                layers: [{
+                    url: `${ESRI}/World_Street_Map/MapServer/tile/{z}/{y}/{x}`,
+                    options: { attribution: 'Tiles &copy; Esri', maxNativeZoom: 19, maxZoom: 19 }
+                }]
+            },
+            topo: {
+                label: 'Topo',
+                layers: [{
+                    url: `${ESRI}/World_Topo_Map/MapServer/tile/{z}/{y}/{x}`,
+                    options: { attribution: 'Tiles &copy; Esri', maxNativeZoom: 19, maxZoom: 19 }
+                }]
+            },
+            satellite: {
+                label: 'Satellite + Labels',
+                layers: [
+                    {
+                        url: `${ESRI}/World_Imagery/MapServer/tile/{z}/{y}/{x}`,
+                        options: { attribution: 'Tiles &copy; Esri', maxNativeZoom: 18, maxZoom: 19 }
+                    },
+                    {
+                        url: `${ESRI}/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}`,
+                        options: { maxNativeZoom: 18, maxZoom: 19, zIndex: 2 }
+                    }
+                ]
+            },
+            dark: {
+                label: 'Dark',
+                layers: [
+                    {
+                        url: `${ESRI}/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}`,
+                        options: { attribution: 'Tiles &copy; Esri', maxNativeZoom: 16, maxZoom: 19 }
+                    },
+                    {
+                        url: `${ESRI}/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}`,
+                        options: { maxNativeZoom: 16, maxZoom: 19, zIndex: 2 }
+                    }
+                ]
+            },
+            osm: {
+                label: 'OSM',
+                layers: [{
+                    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    options: {
+                        attribution: '&copy; OpenStreetMap contributors',
+                        maxZoom: 19,
+                        referrerPolicy: 'origin'
+                    }
+                }]
+            }
+        };
+
+        // If a style keeps failing, drop to a style that is known to work.
+        const TILE_FALLBACK = {
+            streets: 'satellite',
+            topo: 'satellite',
+            dark: 'satellite',
+            osm: 'streets',
+            mapbox: 'streets',
+            satellite: null
+        };
+
+        // Firebase (loaded lazily so a failed import can never break the map)
+        let db = null;
+        let fs = null;
+        let currentUser = null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'alexandria-transit-mvp';
+
+        // ==========================================
+        // 4. MAP INITIALISATION
+        // ==========================================
+        function initMap() {
+            const mapContainer = document.getElementById('map');
+            if (!mapContainer) return;
+
+            map = L.map('map', {
+                center: DEFAULT_CENTER,
+                zoom: DEFAULT_ZOOM,
+                minZoom: 3,
+                maxZoom: 19,
+                zoomControl: false
+            });
+
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+            buildTileSwitcher();
+            switchBaseTileLayer('streets');
+
+            backgroundLayerGroup = L.layerGroup().addTo(map);
+            highlightLayerGroup = L.layerGroup().addTo(map);
+
+            // Click on the map -> add a waypoint (only in Draw tab)
+            map.on('click', (e) => {
+                if (currentTab !== 'create') return;
+                addWaypoint(e.latlng.lat, e.latlng.lng);
+            });
+
+            // Make sure Leaflet knows the real container size (fixes zoomed-out / grey maps)
+            const fixSize = () => {
+                if (!map) return;
+                map.invalidateSize();
+            };
+            setTimeout(fixSize, 100);
+            setTimeout(fixSize, 500);
+            setTimeout(() => {
+                fixSize();
+                map.setView(DEFAULT_CENTER, DEFAULT_ZOOM, { animate: false });
+            }, 800);
+            window.addEventListener('load', fixSize);
+            window.addEventListener('resize', fixSize);
+
+            if (typeof ResizeObserver !== 'undefined') {
+                new ResizeObserver(fixSize).observe(document.getElementById('mapWrapper'));
+            }
+        }
+
+        function buildTileSwitcher() {
+            const box = document.getElementById('tileSwitcher');
+            if (!box) return;
+            box.innerHTML = Object.keys(TILE_PROVIDERS).map(key => `
+                <button type="button" id="tileBtn-${key}" onclick="switchBaseTileLayer('${key}')"
+                    class="px-2.5 py-1 rounded-lg text-slate-600 hover:bg-slate-100 transition">${TILE_PROVIDERS[key].label}</button>
+            `).join('');
+        }
+
+        function highlightTileButton(styleKey) {
+            Object.keys(TILE_PROVIDERS).forEach(k => {
+                const btn = document.getElementById(`tileBtn-${k}`);
+                if (!btn) return;
+                btn.className = (k === styleKey)
+                    ? 'px-2.5 py-1 rounded-lg bg-slate-900 text-white transition'
+                    : 'px-2.5 py-1 rounded-lg text-slate-600 hover:bg-slate-100 transition';
+            });
+        }
+
+        window.switchBaseTileLayer = function (styleKey) {
+            if (!map) return;
+
+            if (activeBase) {
+                map.removeLayer(activeBase);
+                activeBase = null;
+            }
+            currentTileStyle = styleKey;
+            highlightTileButton(styleKey);
+
+            let tileLayers = [];
+            if (styleKey === 'mapbox' && customMapboxToken) {
+                tileLayers = [L.tileLayer(
+                    `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${customMapboxToken}`,
+                    { attribution: '&copy; Mapbox &copy; OpenStreetMap', tileSize: 512, zoomOffset: -1, maxZoom: 19 }
+                )];
+            } else {
+                const provider = TILE_PROVIDERS[styleKey] || TILE_PROVIDERS.streets;
+                tileLayers = provider.layers.map(l => L.tileLayer(l.url, l.options));
+            }
+
+            // Automatic fallback when the base tiles keep failing
+            let errorCount = 0;
+            let fellBack = false;
+            tileLayers[0].on('tileerror', () => {
+                errorCount++;
+                if (errorCount < 6 || fellBack) return;
+                const fallback = TILE_FALLBACK[styleKey];
+                if (!fallback) return;
+                fellBack = true;
+                showToast(`"${styleKey}" tiles failed to load. Switching to "${fallback}".`, 'error');
+                switchBaseTileLayer(fallback);
+            });
+
+            activeBase = L.layerGroup(tileLayers).addTo(map);
+        };
+
+        window.openMapSettingsModal = function () {
+            const modal = document.getElementById('mapSettingsModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        };
+
+        window.closeMapSettingsModal = function () {
+            const modal = document.getElementById('mapSettingsModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        };
+
+        window.applyCustomMapboxToken = function () {
+            const token = (document.getElementById('inputMapboxToken').value || '').trim();
+            if (!token.startsWith('pk.') || token.includes('YOUR_') || token.length < 30) {
+                showToast('Invalid token. It must be a real Mapbox token starting with "pk.". Keeping free tiles.', 'error');
+                return;
+            }
+            customMapboxToken = token;
+            switchBaseTileLayer('mapbox');
+            closeMapSettingsModal();
+            showToast('Custom Mapbox tiles activated', 'success');
+        };
+
+        window.resetToFreeTiles = function () {
+            customMapboxToken = '';
+            document.getElementById('inputMapboxToken').value = '';
+            switchBaseTileLayer('streets');
+            closeMapSettingsModal();
+            showToast('Switched to free Esri tiles', 'info');
+        };
+
+        // ==========================================
+        // 5. WAYPOINT DRAWING, STREET SNAPPING & DISTANCE
+        // ==========================================
+        // The point is drawn IMMEDIATELY. Street snapping happens afterwards in
+        // the background (with a timeout), so a slow or blocked routing server
+        // can never stop points from appearing.
+        function addWaypoint(lat, lng) {
+            currentWaypoints.push({
+                lat: Number(lat.toFixed(6)),
+                lng: Number(lng.toFixed(6))
+            });
+            currentSnappedPath = [...currentWaypoints];
+            redrawDraftRoute();
+            snapRoute();
+        }
+
+        function setSnapStatus(text) {
+            const el = document.getElementById('snapStatus');
+            if (el) el.textContent = text || '';
+        }
+
+        async function snapRoute() {
+            const mySeq = ++snapSeq;
+            const snapEnabled = document.getElementById('toggleSnapRoads')?.checked;
+
+            if (currentWaypoints.length < 2 || !snapEnabled || currentWaypoints.length > 90) {
+                currentSnappedPath = [...currentWaypoints];
+                setSnapStatus('');
+                redrawDraftRoute();
+                return;
+            }
+
+            setSnapStatus('Snapping to streets...');
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 7000);
+
+            try {
+                const coordsString = currentWaypoints.map(p => `${p.lng},${p.lat}`).join(';');
+                const url = `https://router.project-osrm.org/route/v1/driving/${coordsString}?overview=full&geometries=geojson`;
+                const res = await fetch(url, { signal: controller.signal });
+                if (!res.ok) throw new Error('OSRM status ' + res.status);
+                const data = await res.json();
+
+                // A newer click/drag happened while waiting: drop this stale result
+                if (mySeq !== snapSeq) return;
+
+                const geom = data?.routes?.[0]?.geometry?.coordinates;
+                if (Array.isArray(geom) && geom.length >= 2) {
+                    currentSnappedPath = geom.map(c => ({
+                        lat: Number(c[1].toFixed(6)),
+                        lng: Number(c[0].toFixed(6))
+                    }));
+                    setSnapStatus('Snapped to streets');
+                } else {
+                    currentSnappedPath = [...currentWaypoints];
+                    setSnapStatus('No street match, using straight lines');
+                }
+            } catch (err) {
+                if (mySeq !== snapSeq) return;
+                currentSnappedPath = [...currentWaypoints];
+                setSnapStatus('Street snapping unavailable, using straight lines');
+                if (Date.now() - lastSnapWarnAt > 20000) {
+                    lastSnapWarnAt = Date.now();
+                    showToast('Street snapping server is unreachable. Using straight lines.', 'info');
+                }
+            } finally {
+                clearTimeout(timer);
+            }
+
+            if (mySeq === snapSeq) redrawDraftRoute();
+        }
+
+        function redrawDraftRoute() {
+            if (!map) return;
+
+            if (draftPolyline) {
+                map.removeLayer(draftPolyline);
+                draftPolyline = null;
+            }
+            draftMarkers.forEach(m => map.removeLayer(m));
+            draftMarkers = [];
+
+            const vConfig = VEHICLE_CONFIG[selectedVehicle] || VEHICLE_CONFIG['مشروع'];
+            const pathPoints = currentSnappedPath.length >= 2 ? currentSnappedPath : currentWaypoints;
+            const latlngs = pathPoints.map(pt => [pt.lat, pt.lng]);
+
+            if (latlngs.length >= 2) {
+                draftPolyline = L.polyline(latlngs, {
+                    color: vConfig.color,
+                    weight: 6,
+                    opacity: 0.9,
+                    lineJoin: 'round',
+                    interactive: false
+                }).addTo(map);
+            }
+
+            currentWaypoints.forEach((pt, idx) => {
+                const isStart = idx === 0;
+                const isEnd = idx === currentWaypoints.length - 1 && currentWaypoints.length > 1;
+
+                let badgeHtml = '';
+                let iconSize = [16, 16];
+                let iconAnchor = [8, 8];
+
+                if (isStart) {
+                    badgeHtml = `<div class="waypoint-node w-7 h-7 rounded-full bg-emerald-600 text-white border-2 border-white shadow-md flex items-center justify-center text-[10px] font-bold" title="Start Point (البداية)">S</div>`;
+                    iconSize = [28, 28];
+                    iconAnchor = [14, 14];
+                } else if (isEnd) {
+                    badgeHtml = `<div class="waypoint-node w-7 h-7 rounded-full bg-slate-900 text-white border-2 border-white shadow-md flex items-center justify-center text-[10px] font-bold" title="End Point (النهاية)">E</div>`;
+                    iconSize = [28, 28];
+                    iconAnchor = [14, 14];
+                } else {
+                    badgeHtml = `<div class="waypoint-node w-4 h-4 rounded-full border-2 border-white shadow" style="background:${vConfig.color}" title="Waypoint #${idx + 1} (Drag to move, Click to delete)"></div>`;
+                }
+
+                const customIcon = L.divIcon({
+                    className: '',
+                    html: badgeHtml,
+                    iconSize: iconSize,
+                    iconAnchor: iconAnchor
+                });
+
+                const marker = L.marker([pt.lat, pt.lng], {
+                    icon: customIcon,
+                    draggable: true
+                }).addTo(map);
+
+                marker.on('dragend', (e) => {
+                    const newPos = e.target.getLatLng();
+                    currentWaypoints[idx] = {
+                        lat: Number(newPos.lat.toFixed(6)),
+                        lng: Number(newPos.lng.toFixed(6))
+                    };
+                    currentSnappedPath = [...currentWaypoints];
+                    redrawDraftRoute();
+                    snapRoute();
+                });
+
+                marker.on('click', (e) => {
+                    L.DomEvent.stopPropagation(e);
+                    currentWaypoints.splice(idx, 1);
+                    currentSnappedPath = [...currentWaypoints];
+                    redrawDraftRoute();
+                    snapRoute();
+                });
+
+                draftMarkers.push(marker);
+            });
+
+            updateDraftMetricsUI();
+        }
+
+        document.getElementById('toggleSnapRoads')?.addEventListener('change', () => {
+            currentSnappedPath = [...currentWaypoints];
+            redrawDraftRoute();
+            snapRoute();
+        });
+
+        function calculateRouteDistanceKm(points) {
+            if (!points || points.length < 2) return 0;
+            let totalMeters = 0;
+            for (let i = 0; i < points.length - 1; i++) {
+                const p1 = L.latLng(points[i].lat, points[i].lng);
+                const p2 = L.latLng(points[i + 1].lat, points[i + 1].lng);
+                totalMeters += p1.distanceTo(p2);
+            }
+            return Number((totalMeters / 1000).toFixed(2));
+        }
+
+        function updateDraftMetricsUI() {
+            const count = currentWaypoints.length;
+            const pathForDist = currentSnappedPath.length >= 2 ? currentSnappedPath : currentWaypoints;
+            const distKm = calculateRouteDistanceKm(pathForDist);
+            document.getElementById('metricPoints').textContent = `${count} ${count === 1 ? 'pt' : 'pts'}`;
+            document.getElementById('metricDistance').textContent = `${distKm.toFixed(2)} km`;
+
+            document.getElementById('btnUndo').disabled = count === 0;
+            document.getElementById('btnClear').disabled = count === 0;
+            document.getElementById('btnReverse').disabled = count < 2;
+        }
+
+        window.undoLastPoint = function () {
+            if (currentWaypoints.length > 0) {
+                currentWaypoints.pop();
+                currentSnappedPath = [...currentWaypoints];
+                redrawDraftRoute();
+                snapRoute();
+            }
+        };
+
+        window.reverseCurrentRoute = function () {
+            if (currentWaypoints.length >= 2) {
+                currentWaypoints.reverse();
+                currentSnappedPath = [...currentWaypoints];
+                redrawDraftRoute();
+                snapRoute();
+                showToast('Route direction reversed (تم عكس اتجاه الخط)', 'info');
+            }
+        };
+
+        window.clearCurrentDraft = function () {
+            snapSeq++;
+            currentWaypoints = [];
+            currentSnappedPath = [];
+            setSnapStatus('');
+            redrawDraftRoute();
+        };
+
+        window.selectVehicle = function (vType) {
+            selectedVehicle = vType;
+            const activeClasses = {
+                'مشروع': ['border-emerald-500', 'bg-emerald-50/70'],
+                'تونايه': ['border-amber-500', 'bg-amber-50/70'],
+                'اتوبيس': ['border-blue-500', 'bg-blue-50/70']
+            };
+
+            Object.keys(VEHICLE_CONFIG).forEach(key => {
+                const btn = document.getElementById(`vBtn-${key}`);
+                btn.classList.remove('border-emerald-500', 'bg-emerald-50/70', 'border-amber-500', 'bg-amber-50/70', 'border-blue-500', 'bg-blue-50/70', 'border-slate-200', 'bg-white');
+                if (key === vType) {
+                    btn.classList.add(...activeClasses[key]);
+                } else {
+                    btn.classList.add('border-slate-200', 'bg-white');
+                }
+            });
+
+            redrawDraftRoute();
+        };
+
+        // ==========================================
+        // 6. STORAGE: Firebase if available, otherwise local browser storage
+        // ==========================================
+        function loadLocal() {
+            try {
+                const raw = localStorage.getItem(LS_KEY);
+                return raw ? JSON.parse(raw) : [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function saveLocal() {
+            try {
+                localStorage.setItem(LS_KEY, JSON.stringify(savedRoutes));
+            } catch (e) { /* storage may be blocked; in-memory still works */ }
+        }
+
+        function withTimeout(promise, ms) {
+            return Promise.race([
+                promise,
+                new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))
+            ]);
+        }
+
+        function startLocalMode() {
+            const statusEl = document.getElementById('dbStatusIndicator');
+            statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-blue-500"></span> Local (this browser)`;
+            savedRoutes = loadLocal();
+            if (savedRoutes.length === 0) {
+                loadSampleAlexandriaRoutes(true);
+            } else {
+                document.getElementById('savedCountBadge').textContent = savedRoutes.length;
+                renderRoutesList();
+                updateBackgroundRoutesLayer();
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // PASTE YOUR FIREBASE WEB CONFIG HERE (Firebase console -> Project
+        // settings -> Your apps -> Web app -> "firebaseConfig").
+        // Leave as null to run in local mode (routes saved only in the
+        // visitor's own browser).
+        // ------------------------------------------------------------------
+        const MY_FIREBASE_CONFIG = {
+            apiKey: "AIzaSyAcCy8C98-7mzkN2sVG_66PgVh0twNUO6o",
+            authDomain: "mvpdatacollector.firebaseapp.com",
+            projectId: "mvpdatacollector",
+            storageBucket: "mvpdatacollector.firebasestorage.app",
+            messagingSenderId: "328160848831",
+            appId: "1:328160848831:web:b42ddd10281d756fe88f0a",
+            measurementId: "G-4MNRSJNFZF"
+        };
+
+        function getFirebaseConfig() {
+            // Hosted environments that inject a config take priority
+            if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                try { return JSON.parse(__firebase_config); } catch (e) { }
+            }
+            return MY_FIREBASE_CONFIG;
+        }
+
+        async function initFirebase() {
+            const statusEl = document.getElementById('dbStatusIndicator');
+            try {
+                const firebaseConfig = getFirebaseConfig();
+                if (!firebaseConfig) {
+                    throw new Error('No Firebase config (local mode)');
+                }
+                const [appMod, authMod, fsMod] = await withTimeout(Promise.all([
+                    import('https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js'),
+                    import('https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js'),
+                    import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js')
+                ]), 8000);
+
+                const app = appMod.initializeApp(firebaseConfig);
+                const auth = authMod.getAuth(app);
+                db = fsMod.getFirestore(app);
+                fs = fsMod;
+
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await authMod.signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await authMod.signInAnonymously(auth);
+                }
+
+                let subscribed = false;
+                authMod.onAuthStateChanged(auth, (user) => {
+                    currentUser = user;
+                    if (user && !subscribed) {
+                        subscribed = true;
+                        statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500"></span> Cloud Synced`;
+                        subscribeToRoutesCollection();
+                    }
+                });
+            } catch (err) {
+                console.warn('Cloud storage unavailable, using local mode:', err.message);
+                db = null;
+                fs = null;
+                currentUser = null;
+                startLocalMode();
+            }
+        }
+
+        function subscribeToRoutesCollection() {
+            if (!currentUser || !db || !fs) return;
+            const routesCol = fs.collection(db, 'artifacts', appId, 'public', 'data', 'transit_routes');
+
+            fs.onSnapshot(routesCol, (snapshot) => {
+                const loaded = [];
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    let coords = [];
+                    if (typeof data.coordinatesJson === 'string') {
+                        try { coords = JSON.parse(data.coordinatesJson); } catch (e) { }
+                    } else if (Array.isArray(data.coordinates)) {
+                        coords = data.coordinates;
+                    }
+                    loaded.push({
+                        id: docSnap.id,
+                        routeName: data.routeName || 'بدون اسم',
+                        vehicleType: data.vehicleType || 'مشروع',
+                        via: data.via || '',
+                        fare: data.fare || '',
+                        notes: data.notes || '',
+                        distanceKm: data.distanceKm || 0,
+                        waypointsCount: coords.length,
+                        coordinates: coords,
+                        createdAt: data.createdAt || Date.now()
+                    });
+                });
+
+                loaded.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                savedRoutes = loaded;
+
+                document.getElementById('savedCountBadge').textContent = savedRoutes.length;
+                renderRoutesList();
+                updateBackgroundRoutesLayer();
+            }, (error) => {
+                console.error('Firestore listener error:', error);
+                showToast('Error syncing routes from cloud', 'error');
+            });
+        }
+
+        window.handleSaveRoute = async function (e) {
+            e.preventDefault();
+
+            if (currentWaypoints.length < 2) {
+                showToast('Please add at least 2 points on the map to form a transit route.', 'error');
+                return;
+            }
+
+            const finalCoordinates = currentSnappedPath.length >= 2 ? currentSnappedPath : currentWaypoints;
+            const routeName = document.getElementById('inputRouteName').value.trim();
+            const via = document.getElementById('inputVia').value.trim();
+            const fare = document.getElementById('inputFare').value.trim();
+            const notes = document.getElementById('inputNotes').value.trim();
+            const distanceKm = calculateRouteDistanceKm(finalCoordinates);
+
+            const routeId = 'route_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+            const newRouteObj = {
+                id: routeId,
+                routeName,
+                vehicleType: selectedVehicle,
+                via,
+                fare: fare ? Number(fare) : null,
+                notes,
+                distanceKm,
+                waypointsCount: finalCoordinates.length,
+                coordinates: [...finalCoordinates],
+                coordinatesJson: JSON.stringify(finalCoordinates),
+                createdAt: Date.now(),
+                contributorId: currentUser ? currentUser.uid : 'local_user'
+            };
+
+            const saveBtn = document.getElementById('btnSaveRoute');
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = `<i class="ph-bold ph-spinner animate-spin text-lg"></i><span>Saving...</span>`;
+
+            try {
+                if (db && currentUser && fs) {
+                    const routeRef = fs.doc(db, 'artifacts', appId, 'public', 'data', 'transit_routes', routeId);
+                    await fs.setDoc(routeRef, {
+                        routeName: newRouteObj.routeName,
+                        vehicleType: newRouteObj.vehicleType,
+                        via: newRouteObj.via,
+                        fare: newRouteObj.fare,
+                        notes: newRouteObj.notes,
+                        distanceKm: newRouteObj.distanceKm,
+                        waypointsCount: newRouteObj.waypointsCount,
+                        coordinatesJson: newRouteObj.coordinatesJson,
+                        createdAt: newRouteObj.createdAt,
+                        contributorId: newRouteObj.contributorId
+                    });
+                } else {
+                    savedRoutes.unshift(newRouteObj);
+                    saveLocal();
+                    document.getElementById('savedCountBadge').textContent = savedRoutes.length;
+                    renderRoutesList();
+                    updateBackgroundRoutesLayer();
+                }
+
+                document.getElementById('routeForm').reset();
+                clearCurrentDraft();
+                showToast(`Saved "${routeName}" (${selectedVehicle}) successfully`, 'success');
+            } catch (err) {
+                console.error('Save route error:', err);
+                showToast('Could not save route. Please try again.', 'error');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = `<i class="ph-bold ph-floppy-disk text-lg"></i><span>Save Transit Route</span><span class="font-arabic text-xs opacity-90">(حفظ المسار)</span>`;
+            }
+        };
+
+        // ==========================================
+        // 7. SAVED ROUTES EXPLORER & MAP LAYERS
+        // ==========================================
+        window.setFilterVehicle = function (vType) {
+            activeFilterVehicle = vType;
+            ['ALL', 'مشروع', 'تونايه', 'اتوبيس'].forEach(type => {
+                const btn = document.getElementById(`filter-${type}`);
+                if (type === vType) {
+                    btn.className = 'filter-pill px-3 py-1 rounded-full text-xs font-arabic font-bold bg-slate-900 text-white transition flex items-center gap-1.5 shrink-0';
+                } else {
+                    btn.className = 'filter-pill px-3 py-1 rounded-full text-xs font-arabic font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 transition flex items-center gap-1.5 shrink-0';
+                }
+            });
+            renderRoutesList();
+            updateBackgroundRoutesLayer();
+        };
+
+        window.renderRoutesList = function () {
+            const container = document.getElementById('routesListContainer');
+            const queryText = (document.getElementById('searchRoutesInput')?.value || '').trim().toLowerCase();
+
+            const filtered = savedRoutes.filter(r => {
+                const matchesVehicle = activeFilterVehicle === 'ALL' || r.vehicleType === activeFilterVehicle;
+                const matchesSearch = !queryText ||
+                    r.routeName.toLowerCase().includes(queryText) ||
+                    (r.via && r.via.toLowerCase().includes(queryText)) ||
+                    (r.notes && r.notes.toLowerCase().includes(queryText));
+                return matchesVehicle && matchesSearch;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-10 px-4">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+                            <i class="ph ph-map-pin-line text-2xl"></i>
+                        </div>
+                        <p class="text-xs font-bold text-slate-700">No Matching Transit Routes</p>
+                        <p class="text-[11px] text-slate-400 mt-1">Switch to "Draw New Route" or click "+ Load Sample Alex Routes" below to populate data.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filtered.map(route => {
+                const vCfg = VEHICLE_CONFIG[route.vehicleType] || VEHICLE_CONFIG['مشروع'];
+                const isSelected = highlightedRouteId === route.id;
+
+                return `
+                    <div onclick="focusSavedRoute('${route.id}')" class="p-3 rounded-xl border transition-all cursor-pointer ${isSelected ? 'border-slate-900 bg-slate-50 shadow-md ring-1 ring-slate-900' : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'}">
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="flex items-center gap-2">
+                                <span class="px-2.5 py-0.5 rounded-full text-xs font-arabic font-bold border ${vCfg.badgeBg} flex items-center gap-1">
+                                    <i class="ph-fill ${vCfg.icon}"></i>
+                                    ${vCfg.labelAr}
+                                </span>
+                                ${route.fare ? `<span class="text-[11px] font-semibold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md">${route.fare} EGP</span>` : ''}
+                            </div>
+                            <button onclick="promptDeleteRoute(event, '${route.id}')" title="Delete Route" class="p-1 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition">
+                                <i class="ph-bold ph-trash text-sm"></i>
+                            </button>
+                        </div>
+
+                        <h4 class="font-arabic font-bold text-sm text-slate-900 mt-2" dir="auto">${escapeHtml(route.routeName)}</h4>
+
+                        ${route.via ? `<p class="text-xs font-arabic text-slate-500 mt-0.5" dir="auto"><i class="ph-fill ph-signpost text-slate-400 mr-1"></i>${escapeHtml(route.via)}</p>` : ''}
+
+                        <div class="flex items-center justify-between mt-2.5 pt-2 border-t border-slate-100 text-[11px] text-slate-500">
+                            <span class="flex items-center gap-1 font-medium">
+                                <i class="ph-bold ph-ruler text-slate-400"></i> ${Number(route.distanceKm || 0).toFixed(2)} km
+                            </span>
+                            <span class="flex items-center gap-1">
+                                <i class="ph-bold ph-git-commit text-slate-400"></i> ${route.coordinates?.length || 0} pts
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        window.updateBackgroundRoutesLayer = function () {
+            if (!backgroundLayerGroup) return;
+            backgroundLayerGroup.clearLayers();
+
+            const showOverlay = document.getElementById('toggleAllRoutesOverlay').checked;
+            if (!showOverlay) return;
+
+            savedRoutes.forEach(route => {
+                if (activeFilterVehicle !== 'ALL' && route.vehicleType !== activeFilterVehicle) return;
+                if (!route.coordinates || route.coordinates.length < 2) return;
+
+                const vCfg = VEHICLE_CONFIG[route.vehicleType] || VEHICLE_CONFIG['مشروع'];
+                const latlngs = route.coordinates.map(c => [c.lat, c.lng]);
+
+                const poly = L.polyline(latlngs, {
+                    color: vCfg.color,
+                    weight: highlightedRouteId === route.id ? 6 : 4,
+                    opacity: highlightedRouteId === route.id ? 0.95 : 0.55,
+                    dashArray: highlightedRouteId === route.id ? null : '6, 6',
+                    // While drawing, saved lines must not swallow map clicks
+                    interactive: currentTab !== 'create'
+                }).addTo(backgroundLayerGroup);
+
+                poly.on('click', (e) => {
+                    L.DomEvent.stopPropagation(e);
+                    focusSavedRoute(route.id);
+                });
+            });
+        };
+
+        window.focusSavedRoute = function (routeId) {
+            const route = savedRoutes.find(r => r.id === routeId);
+            if (!route || !route.coordinates || route.coordinates.length < 2) return;
+
+            highlightedRouteId = routeId;
+            highlightLayerGroup.clearLayers();
+            updateBackgroundRoutesLayer();
+            renderRoutesList();
+
+            const vCfg = VEHICLE_CONFIG[route.vehicleType] || VEHICLE_CONFIG['مشروع'];
+            const latlngs = route.coordinates.map(c => [c.lat, c.lng]);
+
+            const activePoly = L.polyline(latlngs, {
+                color: vCfg.color,
+                weight: 7,
+                opacity: 1
+            }).addTo(highlightLayerGroup);
+
+            const startPt = route.coordinates[0];
+            const endPt = route.coordinates[route.coordinates.length - 1];
+
+            L.circleMarker([startPt.lat, startPt.lng], {
+                radius: 7, fillColor: '#10b981', color: '#ffffff', weight: 2, fillOpacity: 1
+            }).bindTooltip(`Start: ${route.routeName}`, { direction: 'top' }).addTo(highlightLayerGroup);
+
+            L.circleMarker([endPt.lat, endPt.lng], {
+                radius: 7, fillColor: '#0f172a', color: '#ffffff', weight: 2, fillOpacity: 1
+            }).bindTooltip(`End: ${route.routeName}`, { direction: 'top' }).addTo(highlightLayerGroup);
+
+            const popupHtml = `
+                <div class="p-1 space-y-1.5 min-w-[180px]" dir="auto">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="px-2 py-0.5 rounded-full text-[11px] font-arabic font-bold ${vCfg.badgeBg}">${vCfg.labelAr}</span>
+                        <span class="text-xs font-bold text-slate-600">${route.distanceKm} km</span>
+                    </div>
+                    <div class="font-arabic font-bold text-sm text-slate-900">${escapeHtml(route.routeName)}</div>
+                    ${route.via ? `<div class="text-xs font-arabic text-slate-500">${escapeHtml(route.via)}</div>` : ''}
+                    ${route.fare ? `<div class="text-xs font-semibold text-emerald-700">Fare: ${route.fare} EGP</div>` : ''}
+                </div>
+            `;
+            activePoly.bindPopup(popupHtml).openPopup();
+
+            map.fitBounds(activePoly.getBounds(), { padding: [50, 50], maxZoom: 15 });
+        };
+
+        // ==========================================
+        // 8. SAMPLE ALEXANDRIA TRANSIT ROUTES
+        // ==========================================
+        window.loadSampleAlexandriaRoutes = async function (silent = false) {
+            const sampleRoutes = [
+                {
+                    routeName: 'سيدي جابر - المنشية (طريق الكورنيش)',
+                    vehicleType: 'مشروع',
+                    via: 'عبر: البحر - الشاطبي - محطة الرمل',
+                    fare: 5,
+                    notes: 'خط كورنيش مباشر ٢٤ ساعة',
+                    coordinates: [
+                        { lat: 31.2249, lng: 29.9412 },
+                        { lat: 31.2179, lng: 29.9301 },
+                        { lat: 31.2104, lng: 29.9145 },
+                        { lat: 31.2026, lng: 29.9022 },
+                        { lat: 31.1984, lng: 29.8944 }
+                    ]
+                },
+                {
+                    routeName: 'المندرة - محطة مصر (شارع أبوقير)',
+                    vehicleType: 'اتوبيس',
+                    via: 'عبر: طريق الحرية - سيدي بشر - رشدي - محطة مصر',
+                    fare: 7,
+                    notes: 'أتوبيس نقل عام يمر بجميع محطات شارع أبوقير',
+                    coordinates: [
+                        { lat: 31.2752, lng: 30.0121 },
+                        { lat: 31.2572, lng: 29.9896 },
+                        { lat: 31.2391, lng: 29.9648 },
+                        { lat: 31.2188, lng: 29.9425 },
+                        { lat: 31.1995, lng: 29.9154 },
+                        { lat: 31.1928, lng: 29.9061 }
+                    ]
+                },
+                {
+                    routeName: 'سموحة - سيدي جابر المحطة',
+                    vehicleType: 'تونايه',
+                    via: 'عبر: ميدان فيكتور عمانويل - كوبري كليوباترا',
+                    fare: 4,
+                    notes: 'تونايه داخلية سريعة',
+                    coordinates: [
+                        { lat: 31.2116, lng: 29.9562 },
+                        { lat: 31.2155, lng: 29.9491 },
+                        { lat: 31.2186, lng: 29.9424 }
+                    ]
+                }
+            ];
+
+            for (const item of sampleRoutes) {
+                const rId = 'sample_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+                const dist = calculateRouteDistanceKm(item.coordinates);
+                const routeDoc = {
+                    id: rId,
+                    routeName: item.routeName,
+                    vehicleType: item.vehicleType,
+                    via: item.via,
+                    fare: item.fare,
+                    notes: item.notes,
+                    distanceKm: dist,
+                    waypointsCount: item.coordinates.length,
+                    coordinates: item.coordinates,
+                    coordinatesJson: JSON.stringify(item.coordinates),
+                    createdAt: Date.now()
+                };
+
+                if (db && currentUser && fs) {
+                    try {
+                        await fs.setDoc(fs.doc(db, 'artifacts', appId, 'public', 'data', 'transit_routes', rId), {
+                            routeName: routeDoc.routeName,
+                            vehicleType: routeDoc.vehicleType,
+                            via: routeDoc.via,
+                            fare: routeDoc.fare,
+                            notes: routeDoc.notes,
+                            distanceKm: routeDoc.distanceKm,
+                            waypointsCount: routeDoc.waypointsCount,
+                            coordinatesJson: routeDoc.coordinatesJson,
+                            createdAt: routeDoc.createdAt
+                        });
+                    } catch (e) { }
+                } else {
+                    savedRoutes.push(routeDoc);
+                }
+            }
+
+            if (!(db && currentUser)) saveLocal();
+            document.getElementById('savedCountBadge').textContent = savedRoutes.length;
+            renderRoutesList();
+            updateBackgroundRoutesLayer();
+            if (!silent) {
+                showToast('Loaded 3 sample Alexandria transit routes', 'success');
+            }
+        };
+
+        // ==========================================
+        // 9. DELETE ROUTE MODAL
+        // ==========================================
+        window.promptDeleteRoute = function (event, routeId) {
+            event.stopPropagation();
+            const route = savedRoutes.find(r => r.id === routeId);
+            if (!route) return;
+            pendingDeleteRouteId = routeId;
+            document.getElementById('deleteModalRouteName').textContent = `${route.vehicleType} • ${route.routeName}`;
+            const modal = document.getElementById('deleteModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        };
+
+        window.closeDeleteModal = function () {
+            pendingDeleteRouteId = null;
+            const modal = document.getElementById('deleteModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        };
+
+        document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
+            if (!pendingDeleteRouteId) return;
+            const idToRemove = pendingDeleteRouteId;
+            closeDeleteModal();
+
+            try {
+                if (db && currentUser && fs) {
+                    await fs.deleteDoc(fs.doc(db, 'artifacts', appId, 'public', 'data', 'transit_routes', idToRemove));
+                } else {
+                    savedRoutes = savedRoutes.filter(r => r.id !== idToRemove);
+                    saveLocal();
+                    document.getElementById('savedCountBadge').textContent = savedRoutes.length;
+                    renderRoutesList();
+                    updateBackgroundRoutesLayer();
+                }
+                if (highlightedRouteId === idToRemove) {
+                    highlightedRouteId = null;
+                    highlightLayerGroup.clearLayers();
+                }
+                showToast('Route deleted', 'info');
+            } catch (e) {
+                showToast('Error deleting route', 'error');
+            }
+        });
+
+        // ==========================================
+        // 10. EXPORT DATASET (GeoJSON & Raw JSON)
+        // ==========================================
+        function generateExportString(format) {
+            if (format === 'geojson') {
+                const featureCollection = {
+                    type: "FeatureCollection",
+                    metadata: {
+                        city: "Alexandria, Egypt",
+                        generatedAt: new Date().toISOString(),
+                        totalRoutes: savedRoutes.length
+                    },
+                    features: savedRoutes.map(r => ({
+                        type: "Feature",
+                        properties: {
+                            id: r.id,
+                            routeName: r.routeName,
+                            vehicleType: r.vehicleType,
+                            via: r.via || "",
+                            fareEGP: r.fare || null,
+                            distanceKm: r.distanceKm,
+                            notes: r.notes || ""
+                        },
+                        geometry: {
+                            type: "LineString",
+                            coordinates: (r.coordinates || []).map(pt => [pt.lng, pt.lat])
+                        }
+                    }))
+                };
+                return JSON.stringify(featureCollection, null, 2);
+            }
+            return JSON.stringify(savedRoutes, null, 2);
+        }
+
+        document.getElementById('btnExportModal').addEventListener('click', () => {
+            document.getElementById('exportStatsText').textContent = `${savedRoutes.length} Collected Alexandria Routes`;
+            document.getElementById('exportTextarea').value = generateExportString(currentExportFormat);
+            const modal = document.getElementById('exportModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        });
+
+        window.closeExportModal = function () {
+            const modal = document.getElementById('exportModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        };
+
+        window.switchExportFormat = function (fmt) {
+            currentExportFormat = fmt;
+            document.getElementById('fmtBtnGeoJSON').className = fmt === 'geojson'
+                ? 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 text-white'
+                : 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate-300 text-slate-700';
+            document.getElementById('fmtBtnRaw').className = fmt === 'raw'
+                ? 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 text-white'
+                : 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate-300 text-slate-700';
+            document.getElementById('exportTextarea').value = generateExportString(fmt);
+        };
+
+        window.copyExportToClipboard = function () {
+            const textarea = document.getElementById('exportTextarea');
+            textarea.select();
+            document.execCommand('copy');
+            showToast('Dataset copied to clipboard', 'success');
+        };
+
+        window.downloadExportFile = function () {
+            const dataStr = generateExportString(currentExportFormat);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const ext = currentExportFormat === 'geojson' ? 'geojson' : 'json';
+            a.href = url;
+            a.download = `alexandria_transit_routes.${ext}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('Downloaded transit dataset file', 'success');
+        };
+
+        // ==========================================
+        // 11. UI NAVIGATION & HUB QUICK-JUMP
+        // ==========================================
+        window.switchTab = function (tab) {
+            currentTab = tab;
+            const createBtn = document.getElementById('tabCreateBtn');
+            const exploreBtn = document.getElementById('tabExploreBtn');
+            const createContent = document.getElementById('tabCreateContent');
+            const exploreContent = document.getElementById('tabExploreContent');
+            const mapEl = document.getElementById('map');
+
+            const modeTitle = document.getElementById('modeTitle');
+            const modeSubtitle = document.getElementById('modeSubtitle');
+            const modePulse = document.getElementById('modePulse');
+
+            if (tab === 'create') {
+                createBtn.className = 'py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all bg-white text-slate-900 shadow-sm';
+                exploreBtn.className = 'py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all text-slate-600 hover:text-slate-900';
+                createContent.classList.remove('hidden');
+                exploreContent.classList.add('hidden');
+                mapEl.classList.add('drawing-cursor');
+
+                highlightLayerGroup.clearLayers();
+                highlightedRouteId = null;
+
+                modeTitle.textContent = 'Drawing Mode Active (وضع الرسم)';
+                modeTitle.className = 'text-xs font-bold tracking-wide uppercase text-emerald-400';
+                modeSubtitle.textContent = 'Click anywhere on Alexandria streets to place route waypoints';
+                modePulse.className = 'w-3 h-3 rounded-full bg-emerald-400 animate-ping';
+            } else {
+                exploreBtn.className = 'py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all bg-white text-slate-900 shadow-sm';
+                createBtn.className = 'py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all text-slate-600 hover:text-slate-900';
+                exploreContent.classList.remove('hidden');
+                createContent.classList.add('hidden');
+                mapEl.classList.remove('drawing-cursor');
+
+                modeTitle.textContent = 'Explorer Mode (استعراض الخطوط)';
+                modeTitle.className = 'text-xs font-bold tracking-wide uppercase text-blue-400';
+                modeSubtitle.textContent = 'Click any route in the sidebar or on the map to inspect its path';
+                modePulse.className = 'w-3 h-3 rounded-full bg-blue-400';
+                renderRoutesList();
+            }
+            updateBackgroundRoutesLayer();
+        };
+
+        window.jumpToHub = function (val) {
+            if (!val) return;
+            const [lat, lng, zoom] = val.split(',').map(Number);
+            map.flyTo([lat, lng], zoom || 15, { duration: 1.2 });
+        };
+
+        window.resetAlexandriaView = function () {
+            document.getElementById('hubSelector').value = '';
+            map.flyTo(DEFAULT_CENTER, DEFAULT_ZOOM, { duration: 1.0 });
+        };
+
+        // ==========================================
+        // 12. UTILITIES (Toast & HTML Escaping)
+        // ==========================================
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const colors = {
+                success: 'bg-emerald-600 text-white',
+                error: 'bg-rose-600 text-white',
+                info: 'bg-slate-900 text-white'
+            };
+            const icons = {
+                success: 'ph-check-circle',
+                error: 'ph-warning-octagon',
+                info: 'ph-info'
+            };
+
+            toast.className = `pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-xl text-xs font-semibold transition-all duration-300 ${colors[type] || colors.info}`;
+            toast.innerHTML = `<i class="ph-fill ${icons[type] || icons.info} text-base"></i><span>${escapeHtml(message)}</span>`;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-8px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3600);
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        // ==========================================
+        // START
+        // ==========================================
+        function start() {
+            initMap();
+            initFirebase();
+        }
+        if (document.readyState === 'loading') {
+            window.addEventListener('DOMContentLoaded', start);
+        } else {
+            start();
+        }
+    </script>
+</body>
+
+</html>
