@@ -155,177 +155,303 @@
         <!-- TAB 1: DRAW & SAVE NEW ROUTE -->
         <div id="tabCreateContent" class="flex-1 overflow-y-auto p-4 space-y-5">
 
-            <!-- Step 1: Vehicle Type Selector -->
-            <div>
-                <div class="flex items-center justify-between mb-2">
-                    <label class="text-xs font-bold uppercase tracking-wider text-slate-500">1. Select Vehicle
-                        Type</label>
-                    <span class="text-xs font-arabic text-slate-500 font-semibold">نوع المواصلة</span>
-                </div>
-                <div class="grid grid-cols-3 gap-2.5">
-                    <button type="button" onclick="selectVehicle('مشروع')" id="vBtn-مشروع"
-                        class="vehicle-btn group relative p-3 rounded-xl border-2 border-emerald-500 bg-emerald-50/70 text-left transition-all flex flex-col justify-between">
-                        <div class="flex items-center justify-between w-full mb-1.5">
-                            <span class="w-3 h-3 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20"></span>
-                            <i class="ph-fill ph-van text-xl text-emerald-600"></i>
-                        </div>
-                        <div class="font-arabic font-bold text-base text-slate-900">مشروع</div>
-                        <div class="text-[11px] text-slate-500 font-medium">Microbus (14-seat)</div>
-                    </button>
-
-                    <button type="button" onclick="selectVehicle('تونايه')" id="vBtn-تونايه"
-                        class="vehicle-btn group relative p-3 rounded-xl border-2 border-slate-200 hover:border-amber-300 bg-white text-left transition-all flex flex-col justify-between">
-                        <div class="flex items-center justify-between w-full mb-1.5">
-                            <span class="w-3 h-3 rounded-full bg-amber-500"></span>
-                            <i class="ph-fill ph-car-profile text-xl text-amber-500"></i>
-                        </div>
-                        <div class="font-arabic font-bold text-base text-slate-900">تونايه</div>
-                        <div class="text-[11px] text-slate-500 font-medium">Minivan (7-seat)</div>
-                    </button>
-
-                    <button type="button" onclick="selectVehicle('اتوبيس')" id="vBtn-اتوبيس"
-                        class="vehicle-btn group relative p-3 rounded-xl border-2 border-slate-200 hover:border-blue-300 bg-white text-left transition-all flex flex-col justify-between">
-                        <div class="flex items-center justify-between w-full mb-1.5">
-                            <span class="w-3 h-3 rounded-full bg-blue-500"></span>
-                            <i class="ph-fill ph-bus text-xl text-blue-600"></i>
-                        </div>
-                        <div class="font-arabic font-bold text-base text-slate-900">اتوبيس</div>
-                        <div class="text-[11px] text-slate-500 font-medium">Public Bus</div>
-                    </button>
-                </div>
+            <!-- MODE SWITCH: draw a route OR add a stop (موقف) -->
+            <div class="grid grid-cols-2 gap-1.5 bg-slate-100 p-1 rounded-xl">
+                <button type="button" id="modeRouteBtn" onclick="setDrawMode('route')"
+                    class="py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all bg-white text-slate-900 shadow-sm">
+                    <i class="ph-bold ph-path text-emerald-600 text-sm"></i>
+                    <span>Draw Route</span>
+                    <span class="font-arabic text-[11px] text-slate-500">(خط)</span>
+                </button>
+                <button type="button" id="modeStopBtn" onclick="setDrawMode('stop')"
+                    class="py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all text-slate-600 hover:text-slate-900">
+                    <i class="ph-bold ph-map-pin text-violet-600 text-sm"></i>
+                    <span>Add Stop</span>
+                    <span class="font-arabic text-[11px] text-slate-500">(موقف)</span>
+                </button>
             </div>
 
-            <!-- Step 2: Interactive Route Drawing Controls -->
-            <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-3">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <span class="text-xs font-bold uppercase tracking-wider text-slate-500 block">2. Trace Path on
-                            Map</span>
-                        <span class="text-[11px] text-slate-500">Click along Alexandria streets to add points</span>
-                    </div>
-                    <label
-                        class="flex items-center gap-1.5 cursor-pointer bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-sm"
-                        title="Automatically follow street curves between clicked points">
-                        <input type="checkbox" id="toggleSnapRoads" checked
-                            class="rounded text-emerald-600 focus:ring-0 w-3.5 h-3.5 cursor-pointer">
-                        <span class="text-[11px] font-bold text-slate-700">Snap to Streets</span>
-                        <i class="ph-fill ph-road-horizon text-emerald-600 text-sm"></i>
-                    </label>
-                </div>
-
-                <!-- Live Metrics Box -->
-                <div class="grid grid-cols-2 gap-2 bg-white p-2.5 rounded-lg border border-slate-200/80 shadow-sm">
-                    <div class="flex items-center gap-2.5">
-                        <div class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-700">
-                            <i class="ph-bold ph-git-commit text-lg"></i>
-                        </div>
-                        <div>
-                            <div class="text-[10px] uppercase font-semibold text-slate-400">Waypoints</div>
-                            <div id="metricPoints" class="text-sm font-bold text-slate-800">0 pts</div>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-2.5 border-l border-slate-100 pl-2.5">
-                        <div class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-700">
-                            <i class="ph-bold ph-ruler text-lg"></i>
-                        </div>
-                        <div>
-                            <div class="text-[10px] uppercase font-semibold text-slate-400">Est. Distance</div>
-                            <div id="metricDistance" class="text-sm font-bold text-slate-800">0.00 km</div>
-                        </div>
-                    </div>
-                </div>
-                <div id="snapStatus" class="text-[11px] text-slate-500 h-4 leading-4"></div>
-
-                <div class="flex items-center gap-2">
-                    <button type="button" onclick="undoLastPoint()" id="btnUndo" disabled
-                        class="flex-1 py-2 px-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-semibold text-slate-700 flex items-center justify-center gap-1.5 shadow-sm transition">
-                        <i class="ph-bold ph-arrow-u-up-left"></i>
-                        <span>Undo Point</span>
-                    </button>
-                    <button type="button" onclick="reverseCurrentRoute()" id="btnReverse" disabled
-                        title="Swap Start and End points"
-                        class="py-2 px-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-semibold text-slate-700 flex items-center justify-center gap-1 shadow-sm transition">
-                        <i class="ph-bold ph-arrows-left-right"></i>
-                        <span>Reverse</span>
-                    </button>
-                    <button type="button" onclick="clearCurrentDraft()" id="btnClear" disabled
-                        class="py-2 px-2.5 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 disabled:opacity-40 disabled:pointer-events-none text-xs font-semibold text-rose-600 flex items-center justify-center gap-1 transition">
-                        <i class="ph-bold ph-trash"></i>
-                        <span>Clear</span>
-                    </button>
-                </div>
-
-                <p class="text-[11px] text-slate-500 flex items-center gap-1.5 leading-tight">
-                    <i class="ph-fill ph-info text-blue-500 shrink-0"></i>
-                    <span>Tip: You can <strong>drag</strong> any point to adjust its street position, or
-                        <strong>click</strong> a point to remove it.</span>
-                </p>
-            </div>
-
-            <!-- Step 3: Route Details Form -->
-            <form id="routeForm" onsubmit="handleSaveRoute(event)" class="space-y-3.5">
-                <div class="flex items-center justify-between">
-                    <label class="text-xs font-bold uppercase tracking-wider text-slate-500">3. Route
-                        Information</label>
-                    <span class="text-xs font-arabic text-slate-500 font-semibold">بيانات الخط</span>
-                </div>
-
+            <!-- STOP MODE PANEL (hidden until "Add Stop" is chosen) -->
+            <div id="stopModePanel" class="hidden space-y-4">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1">
-                        Route Name / Line <span class="text-rose-500">*</span>
-                        <span class="font-arabic text-slate-400 font-normal float-right">اسم الخط (من - إلى)</span>
-                    </label>
-                    <input type="text" id="inputRouteName" required dir="auto"
-                        placeholder="مثال: سيدي جابر - المنشية (أو المندرة - محطة مصر)"
-                        class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 font-arabic placeholder:text-slate-400 select-text">
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-xs font-bold uppercase tracking-wider text-slate-500">1. Select Stop
+                            Type</label>
+                        <span class="text-xs font-arabic text-slate-500 font-semibold">نوع الموقف</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2.5">
+                        <button type="button" onclick="selectStopType('موقف مشاريع')" id="sBtn-microbus"
+                            class="vehicle-btn group relative p-3 rounded-xl border-2 border-emerald-500 bg-emerald-50/70 text-left transition-all flex flex-col justify-between">
+                            <div class="flex items-center justify-between w-full mb-1.5">
+                                <span class="w-3 h-3 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20"></span>
+                                <i class="ph-fill ph-van text-xl text-emerald-600"></i>
+                            </div>
+                            <div class="font-arabic font-bold text-sm text-slate-900">موقف مشاريع</div>
+                            <div class="text-[11px] text-slate-500 font-medium">Microbus stop</div>
+                        </button>
+
+                        <button type="button" onclick="selectStopType('موقف تونيات')" id="sBtn-minivan"
+                            class="vehicle-btn group relative p-3 rounded-xl border-2 border-slate-200 hover:border-amber-300 bg-white text-left transition-all flex flex-col justify-between">
+                            <div class="flex items-center justify-between w-full mb-1.5">
+                                <span class="w-3 h-3 rounded-full bg-amber-500"></span>
+                                <i class="ph-fill ph-car-profile text-xl text-amber-500"></i>
+                            </div>
+                            <div class="font-arabic font-bold text-sm text-slate-900">موقف تونيات</div>
+                            <div class="text-[11px] text-slate-500 font-medium">Minivan stop</div>
+                        </button>
+
+                        <button type="button" onclick="selectStopType('موقف تكاتك')" id="sBtn-tuktuk"
+                            class="vehicle-btn group relative p-3 rounded-xl border-2 border-slate-200 hover:border-violet-300 bg-white text-left transition-all flex flex-col justify-between">
+                            <div class="flex items-center justify-between w-full mb-1.5">
+                                <span class="w-3 h-3 rounded-full bg-violet-500"></span>
+                                <i class="ph-fill ph-moped text-xl text-violet-600"></i>
+                            </div>
+                            <div class="font-arabic font-bold text-sm text-slate-900">موقف تكاتك</div>
+                            <div class="text-[11px] text-slate-500 font-medium">Tuk-tuk stop</div>
+                        </button>
+                    </div>
                 </div>
 
-                <div class="grid grid-cols-3 gap-2.5">
-                    <div class="col-span-2">
+                <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2.5">
+                    <div>
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-500 block">2. Place the Stop
+                            on Map</span>
+                        <span class="text-[11px] text-slate-500">Click the map where the stop is. Drag the pin to adjust
+                            it.</span>
+                    </div>
+                    <div
+                        class="flex items-center gap-2.5 bg-white p-2.5 rounded-lg border border-slate-200/80 shadow-sm">
+                        <div class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-700">
+                            <i class="ph-bold ph-map-pin text-lg"></i>
+                        </div>
+                        <div>
+                            <div class="text-[10px] uppercase font-semibold text-slate-400">Location</div>
+                            <div id="stopLocationText" class="text-sm font-bold text-slate-800">Not set</div>
+                        </div>
+                    </div>
+                </div>
+
+                <form id="stopForm" onsubmit="handleSaveStop(event)" class="space-y-3.5">
+                    <div class="flex items-center justify-between">
+                        <label class="text-xs font-bold uppercase tracking-wider text-slate-500">3. Stop
+                            Information</label>
+                        <span class="text-xs font-arabic text-slate-500 font-semibold">بيانات الموقف</span>
+                    </div>
+
+                    <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1">
-                            Main Corridor / Via
-                            <span class="font-arabic text-slate-400 font-normal float-right">خط السير</span>
+                            Stop Name <span class="text-rose-500">*</span>
+                            <span class="font-arabic text-slate-400 font-normal float-right">اسم الموقف</span>
                         </label>
-                        <input type="text" id="inputVia" dir="auto" placeholder="عبر: البحر / أبوقير / المحمودية"
+                        <input type="text" id="inputStopName" required dir="auto"
+                            placeholder="مثال: موقف المنشية / موقف سيدي جابر"
+                            class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 font-arabic placeholder:text-slate-400 select-text">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">
+                            Notes / Destinations (Optional)
+                            <span class="font-arabic text-slate-400 font-normal float-right">ملاحظات / الخطوط</span>
+                        </label>
+                        <input type="text" id="inputStopNotes" dir="auto"
+                            placeholder="مثال: بيطلع منه خطوط العجمي والمندرة..."
+                            class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-violet-500 font-arabic select-text">
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button type="submit" id="btnSaveStop"
+                            class="flex-1 py-3 px-4 rounded-xl bg-slate-900 hover:bg-violet-600 text-white font-semibold text-sm shadow-lg shadow-slate-900/10 transition-all flex items-center justify-center gap-2">
+                            <i class="ph-bold ph-floppy-disk text-lg"></i>
+                            <span>Save Stop</span>
+                            <span class="font-arabic text-xs opacity-90">(حفظ الموقف)</span>
+                        </button>
+                        <button type="button" onclick="clearStopDraft()"
+                            class="py-3 px-3.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-xs font-semibold text-rose-600 flex items-center justify-center gap-1 transition">
+                            <i class="ph-bold ph-trash"></i>
+                            <span>Clear</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- ROUTE MODE PANEL (everything that was already here) -->
+            <div id="routeModePanel" class="space-y-5">
+
+                <!-- Step 1: Vehicle Type Selector -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-xs font-bold uppercase tracking-wider text-slate-500">1. Select Vehicle
+                            Type</label>
+                        <span class="text-xs font-arabic text-slate-500 font-semibold">نوع المواصلة</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2.5">
+                        <button type="button" onclick="selectVehicle('مشروع')" id="vBtn-مشروع"
+                            class="vehicle-btn group relative p-3 rounded-xl border-2 border-emerald-500 bg-emerald-50/70 text-left transition-all flex flex-col justify-between">
+                            <div class="flex items-center justify-between w-full mb-1.5">
+                                <span class="w-3 h-3 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20"></span>
+                                <i class="ph-fill ph-van text-xl text-emerald-600"></i>
+                            </div>
+                            <div class="font-arabic font-bold text-base text-slate-900">مشروع</div>
+                            <div class="text-[11px] text-slate-500 font-medium">Microbus (14-seat)</div>
+                        </button>
+
+                        <button type="button" onclick="selectVehicle('تونايه')" id="vBtn-تونايه"
+                            class="vehicle-btn group relative p-3 rounded-xl border-2 border-slate-200 hover:border-amber-300 bg-white text-left transition-all flex flex-col justify-between">
+                            <div class="flex items-center justify-between w-full mb-1.5">
+                                <span class="w-3 h-3 rounded-full bg-amber-500"></span>
+                                <i class="ph-fill ph-car-profile text-xl text-amber-500"></i>
+                            </div>
+                            <div class="font-arabic font-bold text-base text-slate-900">تونايه</div>
+                            <div class="text-[11px] text-slate-500 font-medium">Minivan (7-seat)</div>
+                        </button>
+
+                        <button type="button" onclick="selectVehicle('اتوبيس')" id="vBtn-اتوبيس"
+                            class="vehicle-btn group relative p-3 rounded-xl border-2 border-slate-200 hover:border-blue-300 bg-white text-left transition-all flex flex-col justify-between">
+                            <div class="flex items-center justify-between w-full mb-1.5">
+                                <span class="w-3 h-3 rounded-full bg-blue-500"></span>
+                                <i class="ph-fill ph-bus text-xl text-blue-600"></i>
+                            </div>
+                            <div class="font-arabic font-bold text-base text-slate-900">اتوبيس</div>
+                            <div class="text-[11px] text-slate-500 font-medium">Public Bus</div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Step 2: Interactive Route Drawing Controls -->
+                <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <span class="text-xs font-bold uppercase tracking-wider text-slate-500 block">2. Trace Path
+                                on
+                                Map</span>
+                            <span class="text-[11px] text-slate-500">Click along Alexandria streets to add points</span>
+                        </div>
+                        <label
+                            class="flex items-center gap-1.5 cursor-pointer bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-sm"
+                            title="Automatically follow street curves between clicked points">
+                            <input type="checkbox" id="toggleSnapRoads" checked
+                                class="rounded text-emerald-600 focus:ring-0 w-3.5 h-3.5 cursor-pointer">
+                            <span class="text-[11px] font-bold text-slate-700">Snap to Streets</span>
+                            <i class="ph-fill ph-road-horizon text-emerald-600 text-sm"></i>
+                        </label>
+                    </div>
+
+                    <!-- Live Metrics Box -->
+                    <div class="grid grid-cols-2 gap-2 bg-white p-2.5 rounded-lg border border-slate-200/80 shadow-sm">
+                        <div class="flex items-center gap-2.5">
+                            <div
+                                class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-700">
+                                <i class="ph-bold ph-git-commit text-lg"></i>
+                            </div>
+                            <div>
+                                <div class="text-[10px] uppercase font-semibold text-slate-400">Waypoints</div>
+                                <div id="metricPoints" class="text-sm font-bold text-slate-800">0 pts</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2.5 border-l border-slate-100 pl-2.5">
+                            <div
+                                class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-700">
+                                <i class="ph-bold ph-ruler text-lg"></i>
+                            </div>
+                            <div>
+                                <div class="text-[10px] uppercase font-semibold text-slate-400">Est. Distance</div>
+                                <div id="metricDistance" class="text-sm font-bold text-slate-800">0.00 km</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="snapStatus" class="text-[11px] text-slate-500 h-4 leading-4"></div>
+
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="undoLastPoint()" id="btnUndo" disabled
+                            class="flex-1 py-2 px-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-semibold text-slate-700 flex items-center justify-center gap-1.5 shadow-sm transition">
+                            <i class="ph-bold ph-arrow-u-up-left"></i>
+                            <span>Undo Point</span>
+                        </button>
+                        <button type="button" onclick="reverseCurrentRoute()" id="btnReverse" disabled
+                            title="Swap Start and End points"
+                            class="py-2 px-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-semibold text-slate-700 flex items-center justify-center gap-1 shadow-sm transition">
+                            <i class="ph-bold ph-arrows-left-right"></i>
+                            <span>Reverse</span>
+                        </button>
+                        <button type="button" onclick="clearCurrentDraft()" id="btnClear" disabled
+                            class="py-2 px-2.5 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 disabled:opacity-40 disabled:pointer-events-none text-xs font-semibold text-rose-600 flex items-center justify-center gap-1 transition">
+                            <i class="ph-bold ph-trash"></i>
+                            <span>Clear</span>
+                        </button>
+                    </div>
+
+                    <p class="text-[11px] text-slate-500 flex items-center gap-1.5 leading-tight">
+                        <i class="ph-fill ph-info text-blue-500 shrink-0"></i>
+                        <span>Tip: You can <strong>drag</strong> any point to adjust its street position, or
+                            <strong>click</strong> a point to remove it.</span>
+                    </p>
+                </div>
+
+                <!-- Step 3: Route Details Form -->
+                <form id="routeForm" onsubmit="handleSaveRoute(event)" class="space-y-3.5">
+                    <div class="flex items-center justify-between">
+                        <label class="text-xs font-bold uppercase tracking-wider text-slate-500">3. Route
+                            Information</label>
+                        <span class="text-xs font-arabic text-slate-500 font-semibold">بيانات الخط</span>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">
+                            Route Name / Line <span class="text-rose-500">*</span>
+                            <span class="font-arabic text-slate-400 font-normal float-right">اسم الخط (من - إلى)</span>
+                        </label>
+                        <input type="text" id="inputRouteName" required dir="auto"
+                            placeholder="مثال: سيدي جابر - المنشية (أو المندرة - محطة مصر)"
+                            class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 font-arabic placeholder:text-slate-400 select-text">
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-2.5">
+                        <div class="col-span-2">
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">
+                                Main Corridor / Via
+                                <span class="font-arabic text-slate-400 font-normal float-right">خط السير</span>
+                            </label>
+                            <input type="text" id="inputVia" dir="auto" placeholder="عبر: البحر / أبوقير / المحمودية"
+                                class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 font-arabic select-text">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">
+                                Fare (EGP)
+                                <span class="font-arabic text-slate-400 font-normal float-right">الأجرة</span>
+                            </label>
+                            <input type="number" step="0.5" min="0" id="inputFare" placeholder="e.g. 5"
+                                class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 select-text">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">
+                            How do you hail it? (Optional)
+                            <span class="font-arabic text-slate-400 font-normal float-right">ازاي بتشاور للمشروع؟</span>
+                        </label>
+                        <input type="text" id="inputHailSign" dir="auto" maxlength="120"
+                            placeholder="ممكن توصف بكتابة أو بإيموجي"
                             class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 font-arabic select-text">
                     </div>
+
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1">
-                            Fare (EGP)
-                            <span class="font-arabic text-slate-400 font-normal float-right">الأجرة</span>
+                            Notes / Peak Hours (Optional)
+                            <span class="font-arabic text-slate-400 font-normal float-right">ملاحظات</span>
                         </label>
-                        <input type="number" step="0.5" min="0" id="inputFare" placeholder="e.g. 5"
-                            class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 select-text">
+                        <input type="text" id="inputNotes" dir="auto"
+                            placeholder="مثال: متاح ٢٤ ساعة، يقف عند كوبري ستانلي..."
+                            class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 font-arabic select-text">
                     </div>
-                </div>
 
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1">
-                        How do you hail it? (Optional)
-                        <span class="font-arabic text-slate-400 font-normal float-right">ازاي بتشاور للمشروع؟</span>
-                    </label>
-                    <input type="text" id="inputHailSign" dir="auto" maxlength="120"
-                        placeholder="ممكن توصف بكتابة أو بإيموجي"
-                        class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 font-arabic select-text">
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1">
-                        Notes / Peak Hours (Optional)
-                        <span class="font-arabic text-slate-400 font-normal float-right">ملاحظات</span>
-                    </label>
-                    <input type="text" id="inputNotes" dir="auto"
-                        placeholder="مثال: متاح ٢٤ ساعة، يقف عند كوبري ستانلي..."
-                        class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 font-arabic select-text">
-                </div>
-
-                <button type="submit" id="btnSaveRoute"
-                    class="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-emerald-600 text-white font-semibold text-sm shadow-lg shadow-slate-900/10 transition-all flex items-center justify-center gap-2">
-                    <i class="ph-bold ph-floppy-disk text-lg"></i>
-                    <span>Save Transit Route</span>
-                    <span class="font-arabic text-xs opacity-90">(حفظ المسار)</span>
-                </button>
-            </form>
+                    <button type="submit" id="btnSaveRoute"
+                        class="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-emerald-600 text-white font-semibold text-sm shadow-lg shadow-slate-900/10 transition-all flex items-center justify-center gap-2">
+                        <i class="ph-bold ph-floppy-disk text-lg"></i>
+                        <span>Save Transit Route</span>
+                        <span class="font-arabic text-xs opacity-90">(حفظ المسار)</span>
+                    </button>
+                </form>
+            </div><!-- /routeModePanel -->
         </div>
 
         <!-- TAB 2: SAVED ROUTES EXPLORER -->
@@ -397,14 +523,14 @@
                     <option value="31.2185,29.9422,15">سيدي جابر (Sidi Gaber)</option>
                     <option value="31.2130,29.9555,15">سموحة (Smouha)</option>
                     <option value="31.2456,29.9675,15">سان ستيفانو (San Stefano)</option>
-                    <option value="31.2422,29.9922,15">سيدي بشر (Sidi Bishr)</option>
+                    <option value="31.2555,29.9832,15">سيدي بشر (Sidi Bishr)</option>
                     <option value="31.2654,29.9985,15">ميامي (Miami)</option>
                     <option value="31.2768,30.0131,15">المندرة (El-Mandara)</option>
                     <option value="31.3210,30.0615,14">أبو قير (Abu Qir)</option>
                     <option value="31.1905,29.9265,15">محرم بك (Moharam Bek)</option>
-                    <option value="31.1795,29.8768,15">الورديان / القباري (El-Wardian)</option>
-                    <option value="31.1489,29.7825,14">العجمي - البيطاش / الهانوفيل (El-Agamy)</option>
-                    <option value="31.0975,29.7260,14">الكيلو 21 (Kilo 21)</option>
+                    <option value="31.1677,29.8768,15">الورديان / القباري (El-Wardian)</option>
+                    <option value="31.1116,29.7591,14">العجمي - البيطاش / الهانوفيل (El-Agamy)</option>
+                    <option value="31.0769,29.7324,15">الكيلو 21 (Kilo 21)</option>
                 </select>
                 <button onclick="resetAlexandriaView()" title="Reset to Full Alexandria View"
                     class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600 transition shrink-0">
@@ -425,6 +551,15 @@
                             onchange="updateBackgroundRoutesLayer()"
                             class="rounded text-emerald-600 focus:ring-0 w-4 h-4 cursor-pointer">
                         <span>Show Saved Network</span>
+                    </label>
+                </div>
+
+                <div
+                    class="bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-xl shadow-lg border border-slate-200/80 flex items-center">
+                    <label class="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700">
+                        <input type="checkbox" id="toggleStopsOverlay" checked onchange="renderStopsOnMap()"
+                            class="rounded text-violet-600 focus:ring-0 w-4 h-4 cursor-pointer">
+                        <span class="font-arabic">المواقف</span>
                     </label>
                 </div>
             </div>
@@ -758,7 +893,7 @@
 
             // Click on the map -> add a waypoint (only in Draw tab)
             map.on('click', (e) => {
-                if (currentTab !== 'create') return;
+                if (currentTab !== 'create' || drawMode === 'stop') return;
                 addWaypoint(e.latlng.lat, e.latlng.lng);
             });
 
@@ -1128,6 +1263,7 @@
             const statusEl = document.getElementById('dbStatusIndicator');
             statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-blue-500"></span> Local (this browser)`;
             savedRoutes = loadLocal();
+            loadLocalStops();
             if (savedRoutes.length === 0) {
                 loadSampleAlexandriaRoutes(true);
             } else {
@@ -1192,6 +1328,7 @@
                         subscribed = true;
                         statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500"></span> Cloud Synced`;
                         subscribeToRoutesCollection();
+                        subscribeToStopsCollection();
                     }
                 });
             } catch (err) {
@@ -1641,7 +1778,7 @@
                             type: "LineString",
                             coordinates: (r.coordinates || []).map(pt => [pt.lng, pt.lat])
                         }
-                    }))
+                    })).concat(stopFeatures())
                 };
                 return JSON.stringify(featureCollection, null, 2);
             }
@@ -1790,11 +1927,339 @@
         }
 
         // ==========================================
+        // 13. STOPS: موقف مشاريع / موقف تونيات / موقف تكاتك
+        // ==========================================
+        const STOP_CONFIG = {
+            'موقف مشاريع': {
+                id: 'microbus', labelAr: 'موقف مشاريع', labelEn: 'Microbus stop',
+                color: '#10b981', icon: 'ph-van',
+                badgeBg: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+                active: ['border-emerald-500', 'bg-emerald-50/70']
+            },
+            'موقف تونيات': {
+                id: 'minivan', labelAr: 'موقف تونيات', labelEn: 'Minivan stop',
+                color: '#f59e0b', icon: 'ph-car-profile',
+                badgeBg: 'bg-amber-100 text-amber-800 border-amber-300',
+                active: ['border-amber-500', 'bg-amber-50/70']
+            },
+            'موقف تكاتك': {
+                id: 'tuktuk', labelAr: 'موقف تكاتك', labelEn: 'Tuk-tuk stop',
+                color: '#8b5cf6', icon: 'ph-moped',
+                badgeBg: 'bg-violet-100 text-violet-800 border-violet-300',
+                active: ['border-violet-500', 'bg-violet-50/70']
+            }
+        };
+        const LS_STOPS_KEY = 'alexTransitStops_v1';
+
+        let drawMode = 'route'; // 'route' | 'stop'
+        let selectedStopType = 'موقف مشاريع';
+        let currentStop = null; // { lat, lng } of the stop being placed
+        let stopDraftMarker = null;
+        let savedStops = [];
+        let stopsLayerGroup = null;
+        let stopsLive = false; // true while the cloud listener for stops is working
+
+        function initStops() {
+            if (!map) return;
+            stopsLayerGroup = L.layerGroup().addTo(map);
+
+            // Click on the map -> place the stop (only in Draw tab + Add Stop mode)
+            map.on('click', (e) => {
+                if (currentTab !== 'create' || drawMode !== 'stop') return;
+                currentStop = {
+                    lat: Number(e.latlng.lat.toFixed(6)),
+                    lng: Number(e.latlng.lng.toFixed(6))
+                };
+                drawStopDraftMarker();
+            });
+
+            renderStopsOnMap();
+        }
+
+        function makeStopIcon(cfg) {
+            return L.divIcon({
+                className: '',
+                html: `<div class="waypoint-node w-8 h-8 rounded-full border-2 border-white shadow-lg flex items-center justify-center" style="background:${cfg.color}"><i class="ph-fill ${cfg.icon} text-white text-base"></i></div>`,
+                iconSize: [32, 32],
+                iconAnchor: [16, 16]
+            });
+        }
+
+        function updateStopLocationText() {
+            const el = document.getElementById('stopLocationText');
+            if (!el) return;
+            el.textContent = currentStop
+                ? `${currentStop.lat.toFixed(5)}, ${currentStop.lng.toFixed(5)}`
+                : 'Not set (click on the map)';
+        }
+
+        function drawStopDraftMarker() {
+            if (!map) return;
+            if (stopDraftMarker) {
+                map.removeLayer(stopDraftMarker);
+                stopDraftMarker = null;
+            }
+            updateStopLocationText();
+            if (!currentStop) return;
+
+            const cfg = STOP_CONFIG[selectedStopType] || STOP_CONFIG['موقف مشاريع'];
+            stopDraftMarker = L.marker([currentStop.lat, currentStop.lng], {
+                icon: makeStopIcon(cfg),
+                draggable: true,
+                zIndexOffset: 1000
+            }).addTo(map);
+
+            stopDraftMarker.on('dragend', (e) => {
+                const p = e.target.getLatLng();
+                currentStop = { lat: Number(p.lat.toFixed(6)), lng: Number(p.lng.toFixed(6)) };
+                updateStopLocationText();
+            });
+        }
+
+        function applyModeBanner() {
+            if (currentTab !== 'create') return;
+            const modeTitle = document.getElementById('modeTitle');
+            const modeSubtitle = document.getElementById('modeSubtitle');
+            const modePulse = document.getElementById('modePulse');
+            if (drawMode === 'stop') {
+                modeTitle.textContent = 'Add Stop Mode (وضع إضافة موقف)';
+                modeTitle.className = 'text-xs font-bold tracking-wide uppercase text-violet-400';
+                modeSubtitle.textContent = 'Click on the map to place the stop, then fill in its details';
+                modePulse.className = 'w-3 h-3 rounded-full bg-violet-400 animate-ping';
+            } else {
+                modeTitle.textContent = 'Drawing Mode Active (وضع الرسم)';
+                modeTitle.className = 'text-xs font-bold tracking-wide uppercase text-emerald-400';
+                modeSubtitle.textContent = 'Click anywhere on Alexandria streets to place route waypoints';
+                modePulse.className = 'w-3 h-3 rounded-full bg-emerald-400 animate-ping';
+            }
+        }
+
+        // Keep the banner correct when the user returns to the Draw tab
+        const originalSwitchTab = window.switchTab;
+        window.switchTab = function (tab) {
+            originalSwitchTab(tab);
+            if (tab === 'create') applyModeBanner();
+        };
+
+        window.setDrawMode = function (mode) {
+            drawMode = mode;
+            const isStop = mode === 'stop';
+            document.getElementById('routeModePanel').classList.toggle('hidden', isStop);
+            document.getElementById('stopModePanel').classList.toggle('hidden', !isStop);
+
+            const on = 'py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all bg-white text-slate-900 shadow-sm';
+            const off = 'py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all text-slate-600 hover:text-slate-900';
+            document.getElementById('modeRouteBtn').className = isStop ? off : on;
+            document.getElementById('modeStopBtn').className = isStop ? on : off;
+
+            applyModeBanner();
+        };
+
+        window.selectStopType = function (type) {
+            selectedStopType = type;
+            Object.keys(STOP_CONFIG).forEach(key => {
+                const cfg = STOP_CONFIG[key];
+                const btn = document.getElementById(`sBtn-${cfg.id}`);
+                if (!btn) return;
+                btn.classList.remove('border-emerald-500', 'bg-emerald-50/70', 'border-amber-500', 'bg-amber-50/70', 'border-violet-500', 'bg-violet-50/70', 'border-slate-200', 'bg-white');
+                if (key === type) {
+                    btn.classList.add(...cfg.active);
+                } else {
+                    btn.classList.add('border-slate-200', 'bg-white');
+                }
+            });
+            if (currentStop) drawStopDraftMarker();
+        };
+
+        window.clearStopDraft = function () {
+            currentStop = null;
+            drawStopDraftMarker();
+            const f = document.getElementById('stopForm');
+            if (f) f.reset();
+        };
+
+        // ---- storage ----
+        function loadLocalStops() {
+            try {
+                const raw = localStorage.getItem(LS_STOPS_KEY);
+                savedStops = raw ? JSON.parse(raw) : [];
+            } catch (e) {
+                savedStops = [];
+            }
+            renderStopsOnMap();
+        }
+
+        function saveLocalStops() {
+            try {
+                localStorage.setItem(LS_STOPS_KEY, JSON.stringify(savedStops));
+            } catch (e) { /* storage may be blocked; in-memory still works */ }
+        }
+
+        function subscribeToStopsCollection() {
+            if (!currentUser || !db || !fs) return;
+            const stopsCol = fs.collection(db, 'artifacts', appId, 'public', 'data', 'transit_stops');
+
+            fs.onSnapshot(stopsCol, (snapshot) => {
+                stopsLive = true;
+                const loaded = [];
+                snapshot.forEach(docSnap => {
+                    const d = docSnap.data();
+                    if (typeof d.lat !== 'number' || typeof d.lng !== 'number') return;
+                    loaded.push({
+                        id: docSnap.id,
+                        stopName: d.stopName || 'بدون اسم',
+                        stopType: d.stopType || 'موقف مشاريع',
+                        notes: d.notes || '',
+                        lat: d.lat,
+                        lng: d.lng,
+                        createdAt: d.createdAt || Date.now()
+                    });
+                });
+                loaded.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                savedStops = loaded;
+                renderStopsOnMap();
+            }, (error) => {
+                // e.g. reads not allowed by the database rules: stops saved in this visit still show
+                stopsLive = false;
+                console.warn('Stops listener error:', error);
+            });
+        }
+
+        window.handleSaveStop = async function (e) {
+            e.preventDefault();
+
+            if (!currentStop) {
+                showToast('Click on the map to place the stop first.', 'error');
+                return;
+            }
+
+            const stopName = document.getElementById('inputStopName').value.trim();
+            const notes = document.getElementById('inputStopNotes').value.trim();
+            const stopId = 'stop_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+            const stopObj = {
+                id: stopId,
+                stopName,
+                stopType: selectedStopType,
+                notes,
+                lat: currentStop.lat,
+                lng: currentStop.lng,
+                createdAt: Date.now(),
+                contributorId: currentUser ? currentUser.uid : 'local_user'
+            };
+
+            const saveBtn = document.getElementById('btnSaveStop');
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = `<i class="ph-bold ph-spinner animate-spin text-lg"></i><span>Saving...</span>`;
+
+            try {
+                if (db && currentUser && fs) {
+                    const stopRef = fs.doc(db, 'artifacts', appId, 'public', 'data', 'transit_stops', stopId);
+                    await fs.setDoc(stopRef, {
+                        stopName: stopObj.stopName,
+                        stopType: stopObj.stopType,
+                        notes: stopObj.notes,
+                        lat: stopObj.lat,
+                        lng: stopObj.lng,
+                        createdAt: stopObj.createdAt,
+                        contributorId: stopObj.contributorId
+                    });
+                    // If the live listener is not running, show the new stop locally
+                    if (!stopsLive) {
+                        savedStops.unshift(stopObj);
+                        renderStopsOnMap();
+                    }
+                } else {
+                    savedStops.unshift(stopObj);
+                    saveLocalStops();
+                    renderStopsOnMap();
+                }
+
+                const f = document.getElementById('stopForm');
+                if (f) f.reset();
+                currentStop = null;
+                drawStopDraftMarker();
+                showToast(`Saved stop "${stopName}" (${selectedStopType}) successfully`, 'success');
+            } catch (err) {
+                console.error('Save stop error:', err);
+                showToast('Could not save stop. Please try again.', 'error');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = `<i class="ph-bold ph-floppy-disk text-lg"></i><span>Save Stop</span><span class="font-arabic text-xs opacity-90">(حفظ الموقف)</span>`;
+            }
+        };
+
+        window.deleteStop = async function (stopId) {
+            const stop = savedStops.find(s => s.id === stopId);
+            if (!stop) return;
+            if (!window.confirm(`Delete stop "${stop.stopName}"?`)) return;
+
+            try {
+                if (db && currentUser && fs) {
+                    await fs.deleteDoc(fs.doc(db, 'artifacts', appId, 'public', 'data', 'transit_stops', stopId));
+                    if (!stopsLive) {
+                        savedStops = savedStops.filter(s => s.id !== stopId);
+                        renderStopsOnMap();
+                    }
+                } else {
+                    savedStops = savedStops.filter(s => s.id !== stopId);
+                    saveLocalStops();
+                    renderStopsOnMap();
+                }
+                if (map) map.closePopup();
+                showToast('Stop deleted', 'info');
+            } catch (err) {
+                console.error('Delete stop error:', err);
+                showToast('Error deleting stop', 'error');
+            }
+        };
+
+        // ---- display ----
+        window.renderStopsOnMap = function () {
+            if (!stopsLayerGroup) return;
+            stopsLayerGroup.clearLayers();
+
+            const toggle = document.getElementById('toggleStopsOverlay');
+            if (toggle && !toggle.checked) return;
+
+            savedStops.forEach(stop => {
+                const cfg = STOP_CONFIG[stop.stopType] || STOP_CONFIG['موقف مشاريع'];
+                const marker = L.marker([stop.lat, stop.lng], { icon: makeStopIcon(cfg) }).addTo(stopsLayerGroup);
+                marker.bindPopup(`
+                    <div class="p-1 space-y-1.5 min-w-[170px]" dir="auto">
+                        <span class="px-2 py-0.5 rounded-full text-[11px] font-arabic font-bold border ${cfg.badgeBg}">${cfg.labelAr}</span>
+                        <div class="font-arabic font-bold text-sm text-slate-900">${escapeHtml(stop.stopName)}</div>
+                        ${stop.notes ? `<div class="text-xs font-arabic text-slate-500">${escapeHtml(stop.notes)}</div>` : ''}
+                        <button type="button" onclick="deleteStop('${stop.id}')" class="text-[11px] font-semibold text-rose-600 hover:underline">Delete</button>
+                    </div>
+                `);
+            });
+        };
+
+        // ---- export (GeoJSON gets the stops as Point features) ----
+        function stopFeatures() {
+            return savedStops.map(s => ({
+                type: "Feature",
+                properties: {
+                    featureType: "stop",
+                    id: s.id,
+                    stopName: s.stopName,
+                    stopType: s.stopType,
+                    notes: s.notes || ""
+                },
+                geometry: {
+                    type: "Point",
+                    coordinates: [s.lng, s.lat]
+                }
+            }));
+        }
+
+        // ==========================================
         // START
         // ==========================================
         function start() {
             if (EXPORT_ENABLED) document.getElementById('btnExportModal').style.display = '';
             initMap();
+            initStops();
             initFirebase();
         }
         if (document.readyState === 'loading') {
