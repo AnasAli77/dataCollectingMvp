@@ -94,33 +94,80 @@
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
             font-family: 'Inter', 'Cairo', sans-serif;
         }
+
+        /* ===== Phone improvements ===== */
+        /* Browser toolbars on phones make 100vh taller than the visible screen */
+        @supports (height: 100dvh) {
+            body {
+                height: 100dvh !important;
+            }
+        }
+
+        @media (max-width: 767px) {
+
+            /* Allow mapWrapper to shrink to 10% when form expands to 90% on phones */
+            #mapWrapper {
+                min-height: 0 !important;
+            }
+
+            /* iPhones zoom the page when a field smaller than 16px is tapped */
+            #tabCreateContent input,
+            #tabExploreContent input,
+            #hubSelector {
+                font-size: 16px !important;
+            }
+
+            /* Pinch-to-zoom is enough; frees space on the map */
+            .leaflet-control-zoom {
+                display: none;
+            }
+        }
+
+        /* Larger tap area for route points on touch screens */
+        @media (pointer: coarse) {
+            .waypoint-node {
+                position: relative;
+            }
+
+            .waypoint-node::after {
+                content: '';
+                position: absolute;
+                inset: -10px;
+            }
+        }
     </style>
+
 </head>
 
 <body class="bg-slate-900 text-slate-800 h-screen w-screen flex flex-col md:flex-row overflow-hidden select-none">
 
     <!-- LEFT SIDEBAR: Controls, Route Builder & Saved Explorer -->
     <aside
-        class="w-full md:w-[420px] lg:w-[450px] h-[52vh] md:h-full bg-white border-r border-slate-200 flex flex-col z-30 shadow-2xl shrink-0 order-2 md:order-1">
+        class="w-full md:w-[420px] lg:w-[450px] h-[52dvh] md:h-full bg-white border-r border-slate-200 flex flex-col z-30 shadow-2xl shrink-0 order-2 md:order-1 transition-all duration-300 ease-in-out rounded-t-2xl md:rounded-none overflow-hidden">
 
         <!-- App Header -->
         <header
-            class="px-5 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
+            class="px-3 py-2 sm:px-5 sm:py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
             <div class="flex items-center gap-3">
                 <div
-                    class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-blue-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                    <i class="ph-fill ph-map-trifold text-2xl text-white"></i>
+                    class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-blue-500 flex items-center justify-center shadow-lg shadow-emerald-500/20 shrink-0">
+                    <i class="ph-fill ph-map-trifold text-xl sm:text-2xl text-white"></i>
                 </div>
                 <div>
                     <div class="flex items-center gap-2">
-                        <h1 class="font-bold text-base tracking-tight">AlexTransit MVP</h1>
+                        <h1 class="font-bold text-sm sm:text-base tracking-tight">AlexTransit MVP</h1>
                         <span
                             class="text-[11px] font-arabic bg-slate-800 text-emerald-400 px-2 py-0.5 rounded-full border border-slate-700 font-semibold">إسكندرية</span>
                     </div>
-                    <p class="text-xs text-slate-400">Crowdsourced Transit Route Collector</p>
+                    <p class="hidden sm:block text-xs text-slate-400">Crowdsourced Transit Route Collector</p>
                 </div>
             </div>
             <div class="flex items-center gap-1.5">
+                <button type="button" onclick="togglePanel()" title="Show / hide panel"
+                    class="md:hidden px-2.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center gap-1.5 text-xs font-medium border border-slate-700">
+                    <i id="panelToggleIcon" class="ph-bold ph-caret-down text-base text-emerald-400"></i>
+                    <span id="panelToggleLabel">Map</span>
+                </button>
                 <button id="btnMapSettingsModal" style="display:none" onclick="openMapSettingsModal()"
                     title="Optional Mapbox token (not required)"
                     class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white transition flex items-center gap-1 text-xs font-medium border border-slate-700">
@@ -153,7 +200,7 @@
         </div>
 
         <!-- TAB 1: DRAW & SAVE NEW ROUTE -->
-        <div id="tabCreateContent" class="flex-1 overflow-y-auto p-4 space-y-5">
+        <div id="tabCreateContent" class="flex-1 overflow-y-auto overscroll-contain p-4 pb-20 md:pb-4 space-y-5">
 
             <!-- MODE SWITCH: draw a route OR add a stop (موقف) -->
             <div class="grid grid-cols-2 gap-1.5 bg-slate-100 p-1 rounded-xl">
@@ -419,7 +466,8 @@
                                 Fare (EGP)
                                 <span class="font-arabic text-slate-400 font-normal float-right">الأجرة</span>
                             </label>
-                            <input type="number" step="0.5" min="0" id="inputFare" placeholder="e.g. 5"
+                            <input type="number" step="0.5" min="0" inputmode="decimal" id="inputFare"
+                                placeholder="e.g. 5"
                                 class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 select-text">
                         </div>
                     </div>
@@ -483,7 +531,7 @@
                 </div>
             </div>
 
-            <div id="routesListContainer" class="flex-1 overflow-y-auto p-3 space-y-2.5"></div>
+            <div id="routesListContainer" class="flex-1 overflow-y-auto overscroll-contain p-3 space-y-2.5"></div>
 
             <div
                 class="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500 shrink-0">
@@ -500,7 +548,8 @@
     </aside>
 
     <!-- RIGHT AREA: Interactive Map of Alexandria & Floating HUD -->
-    <main id="mapWrapper" class="flex-1 h-[48vh] md:h-full relative order-1 md:order-2">
+    <main id="mapWrapper"
+        class="flex-1 h-[48dvh] md:h-full relative order-1 md:order-2 transition-all duration-300 ease-in-out">
 
         <!-- Top Floating HUD -->
         <div
@@ -514,7 +563,7 @@
                     <span class="hidden sm:inline">Jump to Hub:</span>
                 </div>
                 <select id="hubSelector" onchange="jumpToHub(this.value)"
-                    class="text-xs font-arabic font-bold bg-transparent text-slate-800 pr-2 py-1 focus:outline-none cursor-pointer">
+                    class="text-xs font-arabic font-bold bg-transparent text-slate-800 pr-2 py-1 focus:outline-none cursor-pointer max-w-[170px] sm:max-w-none truncate">
                     <option value="">اختر منطقة في الإسكندرية...</option>
                     <option value="31.2001,29.8994,15">محطة الرمل (Raml Station)</option>
                     <option value="31.1981,29.8942,15">المنشية (El-Mansheya)</option>
@@ -550,7 +599,7 @@
                         <input type="checkbox" id="toggleAllRoutesOverlay" checked
                             onchange="updateBackgroundRoutesLayer()"
                             class="rounded text-emerald-600 focus:ring-0 w-4 h-4 cursor-pointer">
-                        <span>Show Saved Network</span>
+                        <span class="hidden sm:inline">Show Saved Network</span><span class="sm:hidden">Routes</span>
                     </label>
                 </div>
 
@@ -566,7 +615,7 @@
         </div>
 
         <!-- Bottom Floating HUD -->
-        <div
+        <div id="bottomMapHud"
             class="absolute bottom-5 left-3 right-3 z-20 flex flex-wrap items-end justify-between gap-2 pointer-events-none">
 
             <div id="modeBanner"
@@ -575,13 +624,14 @@
                 <div>
                     <div id="modeTitle" class="text-xs font-bold tracking-wide uppercase text-emerald-400">Drawing Mode
                         Active (وضع الرسم)</div>
-                    <div id="modeSubtitle" class="text-[11px] text-slate-300">Click anywhere on Alexandria streets to
+                    <div id="modeSubtitle" class="hidden sm:block text-[11px] text-slate-300">Click anywhere on
+                        Alexandria streets to
                         place route waypoints</div>
                 </div>
             </div>
 
             <div
-                class="-translate-x-[35px] pointer-events-auto bg-white/95 backdrop-blur-md px-3.5 py-2 rounded-xl shadow-lg border border-slate-200/80 flex items-center gap-3 text-xs font-arabic font-bold">
+                class="-translate-x-[35px] pointer-events-auto bg-white/95 backdrop-blur-md px-3.5 py-2 rounded-xl shadow-lg border border-slate-200/80 hidden sm:flex items-center gap-3 text-xs font-arabic font-bold">
                 <div class="flex items-center gap-1.5">
                     <span class="w-3 h-1.5 rounded-full bg-emerald-500 inline-block"></span>
                     <span class="text-slate-700">مشروع</span>
@@ -608,7 +658,7 @@
         class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
         <div
             class="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
-            <div class="px-5 py-4 bg-slate-900 text-white flex items-center justify-between">
+            <div class="px-3 py-2 sm:px-5 sm:py-4 bg-slate-900 text-white flex items-center justify-between">
                 <div class="flex items-center gap-2.5">
                     <i class="ph-fill ph-code-block text-emerald-400 text-xl"></i>
                     <div>
@@ -687,7 +737,7 @@
     <div id="mapSettingsModal"
         class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
         <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden">
-            <div class="px-5 py-4 bg-slate-900 text-white flex items-center justify-between">
+            <div class="px-3 py-2 sm:px-5 sm:py-4 bg-slate-900 text-white flex items-center justify-between">
                 <div class="flex items-center gap-2.5">
                     <i class="ph-fill ph-map-pin text-blue-400 text-xl"></i>
                     <div>
@@ -2252,6 +2302,54 @@
                 }
             }));
         }
+
+        window.togglePanel = function () {
+            const aside = document.querySelector('aside');
+            const mapWrapper = document.getElementById('mapWrapper');
+            const bottomHud = document.getElementById('bottomMapHud');
+            const labelEl = document.getElementById('panelToggleLabel');
+            const collapsed = aside.dataset.collapsed === '1';
+
+            if (collapsed) {
+                // Expand form to 90% of the mobile screen
+                aside.dataset.collapsed = '';
+                aside.style.height = '90dvh';
+                aside.style.overflow = '';
+                if (mapWrapper) mapWrapper.style.height = '10dvh';
+                if (bottomHud) bottomHud.classList.add('hidden');
+                if (labelEl) labelEl.textContent = 'Map';
+                document.getElementById('panelToggleIcon').className =
+                    'ph-bold ph-caret-down text-base text-emerald-400';
+            } else {
+                // Collapse form to header bar so map gets ~92% of the screen
+                aside.dataset.collapsed = '1';
+                aside.style.height = '56px';
+                aside.style.overflow = 'hidden';
+                if (mapWrapper) mapWrapper.style.height = 'calc(100dvh - 56px)';
+                if (bottomHud) bottomHud.classList.remove('hidden');
+                if (labelEl) labelEl.textContent = 'Map';
+                document.getElementById('panelToggleIcon').className =
+                    'ph-bold ph-caret-up text-base text-emerald-400';
+            }
+
+            setTimeout(() => { if (map) map.invalidateSize(); }, 320);
+        };
+
+        // Reset inline mobile heights if screen is resized to desktop
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 768) {
+                const aside = document.querySelector('aside');
+                const mapWrapper = document.getElementById('mapWrapper');
+                const bottomHud = document.getElementById('bottomMapHud');
+                if (aside) {
+                    aside.style.height = '';
+                    aside.style.overflow = '';
+                    aside.dataset.collapsed = '';
+                }
+                if (mapWrapper) mapWrapper.style.height = '';
+                if (bottomHud) bottomHud.classList.remove('hidden');
+            }
+        });
 
         // ==========================================
         // START
