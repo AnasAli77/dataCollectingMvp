@@ -565,21 +565,56 @@
                 <select id="hubSelector" onchange="jumpToHub(this.value)"
                     class="text-[11px] sm:text-xs font-arabic font-bold bg-transparent text-slate-800 pr-2 py-1 focus:outline-none cursor-pointer max-w-[150px] sm:max-w-none truncate">
                     <option value="">اختر منطقة في الإسكندرية...</option>
-                    <option value="31.2001,29.8994,15">محطة الرمل (Raml Station)</option>
-                    <option value="31.1981,29.8942,15">المنشية (El-Mansheya)</option>
-                    <option value="31.1927,29.9061,15">محطة مصر (Misr Station)</option>
-                    <option value="31.2135,29.8852,15">بحري / قلعة قايتباي (Bahary)</option>
-                    <option value="31.2185,29.9422,15">سيدي جابر (Sidi Gaber)</option>
-                    <option value="31.2130,29.9555,15">سموحة (Smouha)</option>
-                    <option value="31.2456,29.9675,15">سان ستيفانو (San Stefano)</option>
-                    <option value="31.2555,29.9832,15">سيدي بشر (Sidi Bishr)</option>
-                    <option value="31.2654,29.9985,15">ميامي (Miami)</option>
-                    <option value="31.2768,30.0131,15">المندرة (El-Mandara)</option>
-                    <option value="31.3210,30.0615,14">أبو قير (Abu Qir)</option>
-                    <option value="31.1905,29.9265,15">محرم بك (Moharam Bek)</option>
-                    <option value="31.1677,29.8768,15">الورديان / القباري (El-Wardian)</option>
-                    <option value="31.1116,29.7591,14">العجمي - البيطاش / الهانوفيل (El-Agamy)</option>
-                    <option value="31.0769,29.7324,15">الكيلو 21 (Kilo 21)</option>
+
+                    <optgroup label="وسط البلد والمركز (Downtown & Central)">
+                        <option value="31.2001,29.8994,15">محطة الرمل (Raml Station)</option>
+                        <option value="31.1981,29.8942,15">المنشية (El-Mansheya)</option>
+                        <option value="31.1927,29.9061,15">محطة مصر (Misr Station)</option>
+                        <option value="31.2135,29.8852,15">بحري / قلعة قايتباي (Bahary)</option>
+                        <option value="31.1992,29.8856,15">الجمرك / الأنفوشي (El-Gomrok)</option>
+                        <option value="31.2089,29.9142,15">الشاطبي / المجمع النظري (El-Shatby)</option>
+                        <option value="31.2015,29.9195,15">الحضرة / باب شرقي (El-Hadra)</option>
+                        <option value="31.2136,29.9261,15">الإبراهيمية / كامب شيزار (El-Ibrahimeya)</option>
+                        <option value="31.2175,29.9338,15">سبورتنج / كليوباترا (Sporting)</option>
+                        <option value="31.2185,29.9422,15">سيدي جابر (Sidi Gaber)</option>
+                    </optgroup>
+
+                    <optgroup label="مناطق وسط وجنوب (South & Canal Axis)">
+                        <option value="31.1905,29.9265,15">محرم بك (Moharam Bek)</option>
+                        <option value="31.1812,29.9195,15">الموقف الجديد (New Bus Terminal)</option>
+                        <option value="31.1825,29.8988,15">كرموز / عمود السواري (Karmouz)</option>
+                        <option value="31.1808,29.9048,15">غيط العنب / راغب (Gheit El-Enab / Ragheb)</option>
+                        <option value="31.2130,29.9555,15">سموحة (Smouha)</option>
+                        <option value="31.2045,29.9780,15">أبيس / عزبة سعد (Abis)</option>
+                    </optgroup>
+
+                    <optgroup label="شرق الإسكندرية (East Alexandria)">
+                        <option value="31.2285,29.9535,15">رشدي / كفر عبده (Roushdy)</option>
+                        <option value="31.2385,29.9620,15">جليم / زيزينيا (Gleem / Zizinia)</option>
+                        <option value="31.2456,29.9675,15">سان ستيفانو (San Stefano)</option>
+                        <option value="31.2410,29.9760,15">باكوس / فلمنج / الظاهرية (Bacos / Fleming)</option>
+                        <option value="31.2305,29.9910,15">العوايد / السيوف (El-Awayed / El-Soyouf)</option>
+                        <option value="31.2425,29.9885,15">ميدان الساعة / فيكتوريا (El-Saa / Victoria)</option>
+                        <option value="31.2555,29.9832,15">سيدي بشر (Sidi Bishr)</option>
+                        <option value="31.2654,29.9985,15">ميامي (Miami)</option>
+                        <option value="31.2715,30.0068,15">العصافرة (El-Asafra)</option>
+                        <option value="31.2768,30.0131,15">المندرة (El-Mandara)</option>
+                        <option value="31.2885,30.0215,15">المنتزه / المعمورة (El-Montaza / El-Maamoura)</option>
+                        <option value="31.2810,30.0410,15">طوسون / المستشارين (Tosson)</option>
+                        <option value="31.3210,30.0615,14">أبو قير (Abu Qir)</option>
+                    </optgroup>
+
+                    <optgroup label="غرب الإسكندرية والعجمي (West & El-Agamy)">
+                        <option value="31.1745,29.8845,15">مينا البصل / القباري (Mina El-Basal / El-Kabbary)</option>
+                        <option value="31.1677,29.8768,15">الورديان / المكس (El-Wardian / El-Max)</option>
+                        <option value="31.1356,29.8169,15">الدخيلة (El-Dekheila)</option>
+                        <option value="31.1195,29.7820,15">العجمي - البيطاش (El-Bitash)</option>
+                        <option value="31.1116,29.7591,15">العجمي - الهانوفيل (El-Hanoville)</option>
+                        <option value="31.0920,29.7425,15">أبو يوسف / أبو تلات (Abu Youssef / Abu Talat)</option>
+                        <option value="31.0769,29.7324,15">الكيلو 21 (Kilo 21)</option>
+                        <option value="31.0155,29.7890,14">العامرية / النهضة (El-Amreya)</option>
+                        <option value="30.8885,29.5755,13">برج العرب الجديدة (New Borg El-Arab)</option>
+                    </optgroup>
                 </select>
                 <button onclick="resetAlexandriaView()" title="Reset to Full Alexandria View"
                     class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600 transition shrink-0">
