@@ -215,6 +215,11 @@
                 </div>
             </div>
             <div class="flex items-center gap-1.5">
+                <button type="button" onclick="openGuide()" title="How to use / طريقة الاستخدام"
+                    class="px-2.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center gap-1.5 text-xs font-medium border border-slate-700">
+                    <i class="ph-bold ph-question text-base text-blue-400"></i>
+                    <span class="font-arabic font-semibold">الدليل</span>
+                </button>
                 <button type="button" onclick="togglePanel()" title="Show / hide panel"
                     class="md:hidden px-2.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center gap-1.5 text-xs font-medium border border-slate-700">
                     <i id="panelToggleIcon" class="ph-bold ph-caret-down text-base text-emerald-400"></i>
@@ -739,6 +744,170 @@
 
         <div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2 pointer-events-none"></div>
     </main>
+
+    <!-- HOW-TO GUIDE MODAL -->
+    <div id="guideModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4"
+        onclick="if(event.target===this)closeGuide()">
+        <div
+            class="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[88dvh]">
+            <div class="px-3 py-2 sm:px-5 sm:py-4 bg-slate-900 text-white flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <i class="ph-fill ph-question text-blue-400 text-xl"></i>
+                    <div>
+                        <h3 class="font-bold text-sm font-arabic">طريقة الاستخدام</h3>
+                        <p class="text-[11px] text-slate-400">How to use Anywhere With You</p>
+                    </div>
+                </div>
+                <button onclick="closeGuide()" class="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white">
+                    <i class="ph-bold ph-x"></i>
+                </button>
+            </div>
+
+            <div dir="rtl" class="font-arabic p-5 overflow-y-auto space-y-6 flex-1 select-text">
+                <section>
+                    <h4 class="text-sm font-extrabold text-emerald-700 mb-3">إضافة خط</h4>
+                    <ol class="space-y-3">
+                        <li class="flex gap-3">
+                            <span
+                                class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">1</span>
+                            <div>
+                                <p class="text-sm font-bold text-slate-800 leading-relaxed">اختار نوع المواصلة: مشروع أو
+                                    تونايه أو اتوبيس.</p>
+                                <p dir="ltr" class="text-[11px] text-slate-500 mt-0.5 text-left">Pick the vehicle type.
+                                </p>
+                            </div>
+                        </li>
+                        <li class="flex gap-3">
+                            <span
+                                class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">2</span>
+                            <div>
+                                <p class="text-sm font-bold text-slate-800 leading-relaxed">دوس على الخريطة على طول
+                                    الشارع اللي الخط بيمشي فيه، من أول الخط لآخره. النقط بتتظبط على الشارع لوحدها.</p>
+                                <p dir="ltr" class="text-[11px] text-slate-500 mt-0.5 text-left">Tap along the street
+                                    from start to end. Points snap to the road.</p>
+                            </div>
+                        </li>
+                        <li class="flex gap-3">
+                            <span
+                                class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">3</span>
+                            <div>
+                                <p class="text-sm font-bold text-slate-800 leading-relaxed">تقدر تحرك أي نقطة بعد ما
+                                    تحطها: اسحبها لمكانها الصح عشان تظبط الخط زي ما إنت عايز.</p>
+                                <p dir="ltr" class="text-[11px] text-slate-500 mt-0.5 text-left">Drag any point after
+                                    placing it to fine-tune the route.</p>
+                            </div>
+                        </li>
+                        <li class="flex gap-3">
+                            <span
+                                class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">4</span>
+                            <div>
+                                <p class="text-sm font-bold text-slate-800 leading-relaxed">لو دوست على نقطة هتتمسح.
+                                    وتقدر تزود نقط قد ما تحب عشان الخط يمشي بالظبط على الطريق.</p>
+                                <p dir="ltr" class="text-[11px] text-slate-500 mt-0.5 text-left">Tap a point to delete
+                                    it. Add as many points as you like to follow the road exactly.</p>
+                            </div>
+                        </li>
+                        <li class="flex gap-3">
+                            <span
+                                class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">5</span>
+                            <div>
+                                <p class="text-sm font-bold text-slate-800 leading-relaxed">اكتب اسم الخط وبيعدي على
+                                    إيه، والأجرة.</p>
+                                <p dir="ltr" class="text-[11px] text-slate-500 mt-0.5 text-left">Enter name, via and
+                                    fare.</p>
+                            </div>
+                        </li>
+                        <li class="flex gap-3">
+                            <span
+                                class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">6</span>
+                            <div>
+                                <p class="text-sm font-bold text-slate-800 leading-relaxed">اكتب بتشاور للعربية ازاي،
+                                    بالكلام أو بإشارة اليد.</p>
+                                <p dir="ltr" class="text-[11px] text-slate-500 mt-0.5 text-left">Describe how you hail
+                                    it.</p>
+                            </div>
+                        </li>
+                        <li class="flex gap-3">
+                            <span
+                                class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">7</span>
+                            <div>
+                                <p class="text-sm font-bold text-slate-800 leading-relaxed">في الملاحظات اكتب لو ينفع
+                                    تركب من على السكة، ولا من الموقف بس او اي حاجة حاسس انها ممكن تفيدنا.</p>
+                                <p dir="ltr" class="text-[11px] text-slate-500 mt-0.5 text-left">In the notes, say
+                                    whether you can board anywhere along the road or only at a stop.</p>
+                            </div>
+                        </li>
+                        <li class="flex gap-3">
+                            <span
+                                class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">8</span>
+                            <div>
+                                <p class="text-sm font-bold text-slate-800 leading-relaxed">دوس حفظ.</p>
+                                <p dir="ltr" class="text-[11px] text-slate-500 mt-0.5 text-left">Save.</p>
+                            </div>
+                        </li>
+                    </ol>
+                </section>
+                <section>
+                    <h4 class="text-sm font-extrabold text-violet-700 mb-3">إضافة موقف</h4>
+                    <ol class="space-y-3">
+                        <li class="flex gap-3">
+                            <span
+                                class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">1</span>
+                            <div>
+                                <p class="text-sm font-bold text-slate-800 leading-relaxed">من فوق اختار "موقف" بدل
+                                    "خط".</p>
+                                <p dir="ltr" class="text-[11px] text-slate-500 mt-0.5 text-left">Switch to Add Stop.</p>
+                            </div>
+                        </li>
+                        <li class="flex gap-3">
+                            <span
+                                class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">2</span>
+                            <div>
+                                <p class="text-sm font-bold text-slate-800 leading-relaxed">اختار النوع: موقف مشاريع أو
+                                    تونيات أو تكاتك.</p>
+                                <p dir="ltr" class="text-[11px] text-slate-500 mt-0.5 text-left">Pick the stop type.</p>
+                            </div>
+                        </li>
+                        <li class="flex gap-3">
+                            <span
+                                class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">3</span>
+                            <div>
+                                <p class="text-sm font-bold text-slate-800 leading-relaxed">دوس على مكان الموقف على
+                                    الخريطة، وتقدر تسحب الدبوس لو مش مظبوط.</p>
+                                <p dir="ltr" class="text-[11px] text-slate-500 mt-0.5 text-left">Tap the spot on the
+                                    map. Drag the pin to adjust it.</p>
+                            </div>
+                        </li>
+                        <li class="flex gap-3">
+                            <span
+                                class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">4</span>
+                            <div>
+                                <p class="text-sm font-bold text-slate-800 leading-relaxed">اكتب اسم الموقف وحفظ.</p>
+                                <p dir="ltr" class="text-[11px] text-slate-500 mt-0.5 text-left">Name it and save.</p>
+                            </div>
+                        </li>
+                    </ol>
+                </section>
+                <section>
+                    <h4 class="text-sm font-extrabold text-blue-700 mb-3">نصايح</h4>
+                    <ul class="space-y-2 text-sm text-slate-700 leading-relaxed list-disc pr-5">
+                        <li>"اختر منطقة" فوق الخريطة بتوديك لأي منطقة في إسكندرية.</li>
+                        <li>علامات "Routes" و"المواقف" بتظهر وتخفي الخطوط والمواقف المحفوظة.</li>
+                        <li>تبويب "Saved Routes" فيه الخطوط اللي اتضافت، وتقدر تمسح الخطوط اللي إنت ضفتها بس.</li>
+                        <li>على الموبايل، زر "Map" بيكبّر الخريطة أو الفورم.</li>
+                        <li>"Undo Point" بيرجع نقطة واحدة، و"Clear" بيمسح الخط كله.</li>
+                        <li>ضيف الخط اللي تعرفه كويس .</li>
+                    </ul>
+                </section>
+            </div>
+
+            <div class="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-end">
+                <button onclick="closeGuide()"
+                    class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-sm font-arabic font-bold text-white shadow-md">فهمت</button>
+            </div>
+        </div>
+    </div>
 
     <!-- EXPORT DATASET MODAL -->
     <div id="exportModal"
@@ -2421,6 +2590,29 @@
 
             setTimeout(() => { if (map) map.invalidateSize(); }, 320);
         };
+
+        // ==========================================
+        // HOW-TO GUIDE
+        // ==========================================
+        const GUIDE_SEEN_KEY = 'ayHettaGuideSeen_v1';
+        window.openGuide = function () {
+            const m = document.getElementById('guideModal');
+            m.classList.remove('hidden');
+            m.classList.add('flex');
+        };
+        window.closeGuide = function () {
+            const m = document.getElementById('guideModal');
+            m.classList.add('hidden');
+            m.classList.remove('flex');
+            try { localStorage.setItem(GUIDE_SEEN_KEY, '1'); } catch (e) { }
+        };
+        // Open once automatically for first-time visitors (after the splash)
+        setTimeout(() => {
+            let seen = false;
+            try { seen = localStorage.getItem(GUIDE_SEEN_KEY) === '1'; } catch (e) { }
+            if (!seen) openGuide();
+        }, 1900);
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeGuide(); });
 
         // Reset inline mobile heights if screen is resized to desktop
         window.addEventListener('resize', () => {
